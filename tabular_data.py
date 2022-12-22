@@ -36,7 +36,8 @@ def clean_tabular_data(df):
     df = combine_description_strings(df)
     df = set_default_feature_values(df)
    
-    return df
+
+    
 
 
 if __name__ == "__main__":
