@@ -1,9 +1,10 @@
 import pandas as pd
 
 def remove_rows_with_missing_ratings(df):
-    """This method drops all rows with null values included from the rating columns
-    Output: df with rows with null values in rating columns removed"""
+    """This method drops all rows with null values included from the rating columns and drops any unnamed columns
+    Output: df with rows with null values in rating columns removed and unnamed column removed"""
     df = df.dropna(subset = ["Cleanliness_rating", "Accuracy_rating", "Communication_rating", "Location_rating", "Check-in_rating", "Value_rating"])
+    df= df.drop(df.columns[df.columns.str.contains('unnamed', case = False)], axis = 1)
     return df
 
 def combine_description_strings(df):
@@ -21,28 +22,35 @@ def combine_description_strings(df):
     return df
 
 def set_default_feature_values(df):
-    """This method replaces all missing data in the beds, bathrooms, bedrooms and guests columns with the value 1
+    """This function replaces all missing data in the beds, bathrooms, bedrooms and guests columns with the value 1
     Output: df with null columns containing the number 1"""
     df[["beds", "bathrooms", "bedrooms", "guests"]] = df[["beds", "bathrooms", "bedrooms", "guests"]].fillna(1)
 
     return df
 
 def clean_tabular_data(df):
-    #TODO: Put all of the code that does this processing into a function called clean_tabular_data which takes in the raw dataframe, calls these functions
-    # sequentially on the output of the previous one, and returns the processed data.
-    """This method calls the methods to clean the data
+    """This function calls the methods to clean the data
     Output: cleaned data frame"""
     df = remove_rows_with_missing_ratings(df)
     df = combine_description_strings(df)
     df = set_default_feature_values(df)
+    return df
    
+def load_airbnb(df, label: str) -> tuple:
+    """This function prepares the data to be used in a ML model returning a features and values tuple
+    Output:Tuple of features and values of fields with non-text data"""
+    df = df.drop(labels = ['ID', 'Category', 'Title', 'Description', 'Amenities', 'Location', 'url'], axis = 1)
+    features = df.drop(label, axis = 1)
+    labels = df[label]
 
-    
-
+    return features, labels
 
 if __name__ == "__main__":
     df = pd.read_csv('./airbnb-property-listings/tabular_data/listing.csv')
     df = clean_tabular_data(df)
     df.to_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
+    label = 'Price_Night'
+    features, labels = load_airbnb(df, label)
+    
 
 
