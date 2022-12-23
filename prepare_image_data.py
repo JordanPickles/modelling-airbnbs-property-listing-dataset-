@@ -2,10 +2,11 @@ import os
 from PIL import Image
 
 
-
 def resize_images(base_dir, processed_images_dir):
-    #Define a function called resize_images which loads each image, and resizes it to the same height and width before saving the new version in your new processed_images folder.
-    #Set the height of the smallest image as the height for all of the other images. Your code should maintain the aspect ratio of the image and adjust the width proportionally to the change in height, rather than just squashing it vertically. This function should also ensure that every image is in RGB format. If it isn't, discard it.
+    """This function opens the image, checks all images are in RGB format and resizes all images in to the same heigh as the smallest images heigh whilst maintaing the aspect ratio of the image, before saving the image in a processed_images folder.
+        base_dir: requires the base directory where all the folders containing the image is stored on the local machine
+        processed_images_dir: provides the directory of where the processed photos will be saved"""
+
     image_file_path_list = []
     smallest_height = float('inf')
     
