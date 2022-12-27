@@ -22,8 +22,14 @@ def combine_description_strings(df):
     return df
 
 def set_default_feature_values(df):
-    """This function replaces all missing data in the beds, bathrooms, bedrooms and guests columns with the value 1
+    """This function ensures all values are the correct data type being as numerical values in the selcted columns and then replaces all missing data in the beds, bathrooms, bedrooms and guests columns with the value 1
     Output: df with null columns containing the number 1"""
+
+    df["bedrooms"] = pd.to_numeric(df["bedrooms"], errors = 'coerce')
+    df["guests"] = pd.to_numeric(df["guests"], errors = 'coerce')
+    df["bathrooms"] = pd.to_numeric(df["bathrooms"], errors = 'coerce')
+    df["beds"] = pd.to_numeric(df["beds"], errors = 'coerce')
+
     df[["beds", "bathrooms", "bedrooms", "guests"]] = df[["beds", "bathrooms", "bedrooms", "guests"]].fillna(1)
 
     return df
