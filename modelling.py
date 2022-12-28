@@ -6,6 +6,9 @@ from sklearn.metrics import mean_squared_error
 from tabular_data import load_airbnb
 
 def split_data(X, y):
+    """This function splits the data into a train, test and validate samples at a rate of 70%, 15% and 15% resepctively.
+    Input: tuples contatining features and labels in numerical form
+    Output: 3 datasets containing tuples of features and labels from the original dataframe"""
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3)
 
     print("Number of samples in:")
@@ -23,6 +26,13 @@ def split_data(X, y):
 
 
 def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
+    """This function fits the train data to a SGD regression model tests the error level of the model on the train, test and validation datasets
+    Input: 
+        X_train, X_test and X_validation consists of the features being passed into the model
+        y_train, y_test and y_validation consists of the labels being passed into the model
+
+    Output: The mean squared error of the model on the train, test and validation sets"""
+    
     model = SGDRegressor()
     np.random.seed(2)
     model.fit(X_train, y_train)
