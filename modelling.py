@@ -1,9 +1,15 @@
+
+
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import SGDRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import r2_score
 from tabular_data import load_airbnb
+
+
 
 def split_data(X, y):
     """This function splits the data into a train, test and validate samples at a rate of 70%, 15% and 15% resepctively.
@@ -24,6 +30,9 @@ def split_data(X, y):
 
     return X_train, y_train, X_test, y_test, X_validation, y_validation
 
+def normalise_data():
+    pass
+
 
 def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     """This function fits the train data to a SGD regression model tests the error level of the model on the train, test and validation datasets
@@ -41,11 +50,22 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     y_validation_pred = model.predict(X_validation)
     y_test_pred = model.predict(X_test)
 
-    train_loss = mean_squared_error(y_train, y_train_pred)
-    validation_loss = mean_squared_error(y_validation, y_validation_pred)
-    test_loss = mean_squared_error(y_test, y_test_pred)
+    train_mse = mean_squared_error(y_train, y_train_pred)
+    train_rmse = mean_squared_error(y_train, y_train_pred, squared = False)
+    train_r2 = r2_score(y_train, y_train_pred)
+    
+    test_mse = mean_squared_error(y_test, y_test_pred)
+    test_rmse = mean_squared_error(y_test, y_test_pred, squared = False)
+    test_r2 = r2_score(y_test, y_test_pred)
 
-    print(f"Train Loss: {train_loss} | Validation Loss: {validation_loss} | "f"Test Loss: {test_loss}")
+    print(f"Train MSE: {train_mse} | Train RMSE: {train_rmse} | Train R2: {train_r2}")
+    print(f"Test MSE: {test_mse} | Test RMSE: {test_rmse} | Test R2 {test_r2}")
+
+    
+
+
+    
+
 
 
 if __name__ == "__main__":
