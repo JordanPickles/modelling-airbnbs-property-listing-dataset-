@@ -1,5 +1,3 @@
-
-
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import SGDRegressor
@@ -33,7 +31,6 @@ def split_data(X, y):
 def normalise_data():
     pass
 
-
 def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     """This function fits the train data to a SGD regression model tests the error level of the model on the train, test and validation datasets
     Input: 
@@ -62,9 +59,15 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     print(f"Test MSE: {test_mse} | Test RMSE: {test_rmse} | Test R2 {test_r2}")
 
     
-
-
-    
+def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, x_test, y_test, x_validation, y_validation, hyperparameters):
+    model = model_class(**hyperparameters) #TODO find how to get all permutations of hyperparameters, need to uupack the hyperparameters before?
+    best_model = []
+    best_hyperparameters = {}
+    performance_metrics = {"validation_RMSE":} #TODO calculate the RMSE of the validation set, this should be used to select the model
+    #TODO build logic to select best model and to report the performance models
+    #TOD fit the data
+    pass
+    return best_model, best_hyperparameters, performance_metrics
 
 
 
