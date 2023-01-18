@@ -6,6 +6,8 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import r2_score
 from tabular_data import load_airbnb
+from math import sqrt
+from itertools import product
 
 
 
@@ -28,7 +30,7 @@ def split_data(X, y):
 
     return X_train, y_train, X_test, y_test, X_validation, y_validation
 
-def normalise_data():
+def normalise_data(): #TODO normalise the data - find best practice
     pass
 
 def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
@@ -52,24 +54,53 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     train_r2 = r2_score(y_train, y_train_pred)
     
     test_mse = mean_squared_error(y_test, y_test_pred)
-    test_rmse = mean_squared_error(y_test, y_test_pred, squared = False)
+    test_rmse = sqrt(mean_squared_error(y_test, y_test_pred))
     test_r2 = r2_score(y_test, y_test_pred)
 
     print(f"Train MSE: {train_mse} | Train RMSE: {train_rmse} | Train R2: {train_r2}")
     print(f"Test MSE: {test_mse} | Test RMSE: {test_rmse} | Test R2 {test_r2}")
 
     
-def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, x_test, y_test, x_validation, y_validation, hyperparameters):
-    model = model_class(**hyperparameters) #TODO find how to get all permutations of hyperparameters, need to uupack the hyperparameters before?
+def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
     best_model = []
     best_hyperparameters = {}
-    performance_metrics = {"validation_RMSE":} #TODO calculate the RMSE of the validation set, this should be used to select the model
-    #TODO build logic to select best model and to report the performance models
-    #TOD fit the data
-    pass
+    performance_metrics = {} 
+    best_val_rmse = float('inf')
+
+    # Provides all possible permutations of hyperparameter combinations
+    keys = hyperparameters.keys()
+    values = hyperparameters.values()
+    hyperparameter_combinations = [dict(zip(keys, combination)) for combination in product(*values)]
+
+    # Iterates through hyperparameter combinations to decifer the optimal hyperparameters
+    for params in hyperparameter_combinations:
+        model = model_class(**params)
+        model.fit(X_train, y_train)
+        val_predictions = model.predict(X_validation)
+        val_rmse = sqrt(mean_squared_error(val_predictions, y_validation))
+
+        if val_rmse < best_val_rmse:
+            best_model = model
+            best_params = params
+            best_val_rmse = val_rmse
+
+    # Provides test metrics
+    y_test_pred = best_model.predict(X_test)
+    test_rmse = sqrt(mean_squared_error(y_test, y_test_pred))
+    test_r2 = r2_score(y_test, y_test_pred)
+    test_mae = mean_absolute_error(y_test, y_test_pred)
+
+    # Map metrics to the performance metrics 
+    performance_metrics['validation_rmse'] = best_val_rmse
+    performance_metrics['test_rmse'] = test_rmse
+    performance_metrics['r_squared'] = test_r2
+    performance_metrics['test'] = test_mae
+
+    
     return best_model, best_hyperparameters, performance_metrics
 
-
+def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
+    
 
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), 'Price_Night')
