@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.linear_model import SGDRegressor
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import r2_score
@@ -62,7 +63,7 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
 
     
 def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
-    best_model = []
+    best_model = None
     best_hyperparameters = {}
     performance_metrics = {} 
     best_val_rmse = float('inf')
@@ -81,7 +82,7 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
 
         if val_rmse < best_val_rmse:
             best_model = model
-            best_params = params
+            best_hyperparameters = params
             best_val_rmse = val_rmse
 
     # Provides test metrics
@@ -100,7 +101,24 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
     return best_model, best_hyperparameters, performance_metrics
 
 def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
+    performance_metrics = {}
     
+    grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'neg_mean_squared_error', cv = 5) 
+    grid_search.fit(X_train, y_train)
+
+    best_model = grid_search.best_estimator_
+    best_hyperparameters = grid_search.best_params_
+
+    y_val_pred = best_model.predict(X_validation)
+    best_validation_rmse = sqrt(-grid_search.best_score_)
+    performance_metrics['validation_rmse'] = best_validation_rmse
+
+    y_test_pred = best_model.predict(X_test)
+    test_rmse = sqrt(mean_squared_error(y_test, y_test_pred))
+    performance_metrics['test_rmse'] = test_rmse
+
+
+    return best_model, best_hyperparameters, performance_metrics
 
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), 'Price_Night')
