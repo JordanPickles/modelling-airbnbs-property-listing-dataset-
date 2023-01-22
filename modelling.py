@@ -1,6 +1,10 @@
 import pandas as pd
 import numpy as np
 from sklearn.linear_model import SGDRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+
+
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import mean_squared_error
@@ -9,6 +13,8 @@ from sklearn.metrics import r2_score
 from tabular_data import load_airbnb
 from math import sqrt
 from itertools import product
+import joblib
+import json
 
 
 
@@ -60,6 +66,8 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
 
     print(f"Train MSE: {train_mse} | Train RMSE: {train_rmse} | Train R2: {train_r2}")
     print(f"Test MSE: {test_mse} | Test RMSE: {test_rmse} | Test R2 {test_r2}")
+
+    #Save the model as the original to be beaten?
 
     
 def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
@@ -120,7 +128,43 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
 
     return best_model, best_hyperparameters, performance_metrics
 
+def save_model(model, hyperparameters, metrics, folder):
+    joblib.dump(model, f'{folder}/model.joblib')
+    with open(f'{folder}/hyperparameters.json', 'w') as f:
+        json.dump(hyperparameters, f)
+    with open(f'{folder}/metrics.json', 'w') as f:
+        json.dump(metrics, f)
+
+def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
+    decision_tree = DecisionTreeRegressor()
+    random_forrest = RandomForestRegressor()
+    gradient_boost = GradientBoostingRegressor() #TODO check if anything should be included here
+    ml_models = [decision_tree, random_forrest, gradient_boost]
+
+    #TODO set the hyperparameters, set them here on in the if name == main section
+
+    for model in ml_models:
+     
+        best_model, best_hyperparameters, performance_metrics = tune_regression_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
+        #TODO us os to make a folder for each model
+
+        #TODO create a folder for each model? Or change the change model function
+        folder = f'./models/regression/linear_regression/{model}'
+        
+        save_model(best_model, best_hyperparameters, performance_metrics, folder)
+        
+
+
+
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), 'Price_Night')
     X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y)
     train_model(X_train, y_train, X_test, y_test, X_validation, y_validation)
+    hyperparameters = {
+        "alpha": [],
+        'learning_rate': [],
+        'epochs': []} #TODO check the hyperparameters to be passed through
+    best_model, best_params, metrics = tune_regression_model_hyperparameters(SGDRegressor(),X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
+
+    #TODO call the evaluate all models function
+    evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
