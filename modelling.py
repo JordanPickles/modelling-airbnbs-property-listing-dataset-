@@ -99,7 +99,7 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
     test_r2 = r2_score(y_test, y_test_pred)
     test_mae = mean_absolute_error(y_test, y_test_pred)
 
-    # Map metrics to the performance metrics 
+    # Map metrics to the performance metrics  
     performance_metrics['validation_rmse'] = best_val_rmse
     performance_metrics['test_rmse'] = test_rmse
     performance_metrics['r_squared'] = test_r2
@@ -138,19 +138,14 @@ def save_model(model, hyperparameters, metrics, folder):
 def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
     decision_tree = DecisionTreeRegressor()
     random_forrest = RandomForestRegressor()
-    gradient_boost = GradientBoostingRegressor() #TODO check if anything should be included here
+    gradient_boost = GradientBoostingRegressor() #TODO check if these models should take in arguments
     ml_models = [decision_tree, random_forrest, gradient_boost]
 
     #TODO set the hyperparameters, set them here on in the if name == main section
 
     for model in ml_models:
-     
         best_model, best_hyperparameters, performance_metrics = tune_regression_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
-        #TODO us os to make a folder for each model
-
-        #TODO create a folder for each model? Or change the change model function
         folder = f'./models/regression/linear_regression/{model}'
-        
         save_model(best_model, best_hyperparameters, performance_metrics, folder)
         
 
@@ -161,9 +156,11 @@ if __name__ == "__main__":
     X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y)
     train_model(X_train, y_train, X_test, y_test, X_validation, y_validation)
     hyperparameters = {
-        "alpha": [],
-        'learning_rate': [],
-        'epochs': []} #TODO check the hyperparameters to be passed through
+        'alpha': [0.0001, 0.001, 0.01, 0.1], # Can this be used as no regularisaiton is set - docs state this tunes the learning rate
+        'learning_rate': ['constant', 'optimal'],
+        'max_iter': [500, 750, 1000, 1250]
+        } #TODO check the hyperparameters to be passed through
+    
     best_model, best_params, metrics = tune_regression_model_hyperparameters(SGDRegressor(),X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
 
     #TODO call the evaluate all models function
