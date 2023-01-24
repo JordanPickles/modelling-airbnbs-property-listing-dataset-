@@ -16,6 +16,7 @@ import itertools
 from itertools import product
 import joblib
 import json
+import os
 
 
 
@@ -65,12 +66,15 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     test_rmse = sqrt(mean_squared_error(y_test, y_test_pred))
     test_r2 = r2_score(y_test, y_test_pred)
 
+    validation_mse = mean_squared_error(y_validation, y_validation_pred)
+    validation_rmse = sqrt(mean_squared_error(y_validation, y_validation_pred))
+    validation_r2 = r2_score(y_validation, y_validation_pred)
+
     print(f"Train MSE: {train_mse} | Train RMSE: {train_rmse} | Train R2: {train_r2}")
     print(f"Test MSE: {test_mse} | Test RMSE: {test_rmse} | Test R2 {test_r2}")
+    print(f"Test MSE: {validation_mse} | Test RMSE: {validation_rmse} | Test R2 {validation_r2}")
 
-    #Save the model as the original to be beaten?
-    #TODO set the hyperparameters
-
+    return validation_mse, validation_rmse, validation_r2
     
 def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
     best_model = None
@@ -104,8 +108,8 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
     # Map metrics to the performance metrics  
     performance_metrics['validation_rmse'] = best_val_rmse
     performance_metrics['test_rmse'] = test_rmse
-    performance_metrics['r_squared'] = test_r2
-    performance_metrics['test'] = test_mae
+    performance_metrics['test_r_squared'] = test_r2
+    performance_metrics['test_mae'] = test_mae
 
     
     return best_model, best_hyperparameters, performance_metrics
@@ -119,17 +123,27 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
     best_model = grid_search.best_estimator_
     best_hyperparameters = grid_search.best_params_
 
+    # Provides Validation Metrics
     y_val_pred = best_model.predict(X_validation)
     best_validation_rmse = sqrt(-grid_search.best_score_)
-    performance_metrics['validation_rmse'] = best_validation_rmse
+    validation_r2 = r2_score(y_validation, y_val_pred)
+    validation_mae = mean_absolute_error(y_validation, y_val_pred)
 
+    # Provides test metrics
     y_test_pred = best_model.predict(X_test)
     test_rmse = sqrt(mean_squared_error(y_test, y_test_pred))
-    performance_metrics['test_rmse'] = test_rmse 
+    test_r2 = r2_score(y_test, y_test_pred)
+    test_mae = mean_absolute_error(y_test, y_test_pred)
+
     
-    #TODO add more performance metrics here? Need to be same as baseline?
-
-
+    # Map metrics to the performance metrics 
+    performance_metrics['validation_rmse'] = best_validation_rmse
+    performance_metrics['validation_r2'] = validation_r2
+    performance_metrics['validation_mae'] = validation_mae
+    performance_metrics['test_rmse'] = test_rmse 
+    performance_metrics['test_r2'] = test_r2
+    performance_metrics['test_mae'] = test_mae
+    
     return best_model, best_hyperparameters, performance_metrics
 
 def save_model(model, hyperparameters, metrics, folder):
@@ -139,7 +153,7 @@ def save_model(model, hyperparameters, metrics, folder):
     with open(f'{folder}/metrics.json', 'w') as f:
         json.dump(metrics, f)
 
-def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): #TODO Need a random seed?
+def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): #TODO Need a random seed? and add the SGD regressor
     folder_names = ['decision_tree', 'random_forest', 'gradient_boost']
     ml_models = [DecisionTreeRegressor(), RandomForestRegressor(), GradientBoostingRegressor()]
 
@@ -164,23 +178,33 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
         'min_samples_leaf': [1, 3, 5, 7]
     }
     model_hyperparameters = [decision_tree_hyperparameters, random_forest_hyperparameters, gradient_boost_hyperparameters]
-
-    
-
+   
+    # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
     for model, folder, hyperparameters in itertools.zip_longest(ml_models, folder_names, model_hyperparameters):
         best_model, best_hyperparameters, performance_metrics = tune_regression_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
         folder = f'./models/regression/linear_regression/{folder}'
-        save_model(best_model, best_hyperparameters, performance_metrics, folder) #TODO the folder includes the brackets
+        save_model(best_model, best_hyperparameters, performance_metrics, folder) 
         
 
+def find_best_model():
+    folder_names = ['decision_tree', 'random_forest', 'gradient_boost']
+    best_model = None
+    best_rmse = float('inf')
+    best_r2 = 0
+    for model, folder in zip(os.listdir('./models/regression/linear_regression/'), folder_names):
+        with open(f'./models/regression/regression/{folder}/metrics.json') as f: #TODO is f string doesn't work, pass a list of models into the for loop
+            metrics = json.load(f)
+            validation_r2 = metrics['validation_r2']
+            validation_rmse = metrics['validation_rmse']
+            validation_mae = metrics['validation_mae']
 
+            if validation_rmse < best_rmse:
+                best_rsme = validation_rmse
+                best_model = model
 
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), 'Price_Night')
     X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y)
-    train_model(X_train, y_train, X_test, y_test, X_validation, y_validation)
-    
-    # best_model, best_params, metrics = tune_regression_model_hyperparameters(SGDRegressor(),X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
-
-    
+    train_model(X_train, y_train, X_test, y_test, X_validation, y_validation)   
     evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation)
+    find_best_model()
