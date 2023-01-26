@@ -77,6 +77,8 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     return validation_mse, validation_rmse, validation_r2
     
 def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
+    #TODO add docstring
+
     best_model = None
     best_hyperparameters = {}
     performance_metrics = {} 
@@ -115,6 +117,8 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
     return best_model, best_hyperparameters, performance_metrics
 
 def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
+    #TODO add docstring
+
     performance_metrics = {}
     
     grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'neg_mean_squared_error', cv = 5) 
@@ -146,16 +150,29 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
     
     return best_model, best_hyperparameters, performance_metrics
 
-def save_model(model, hyperparameters, metrics, folder):
-    joblib.dump(model, f'{folder}/model.joblib')
-    with open(f'{folder}/hyperparameters.json', 'w') as f:
+def save_model(model, hyperparameters, metrics, model_folder):
+    #TODO add docstring
+
+    if not os.path.exists(model_folder):
+        os.makedirs(model_folder)
+
+    joblib.dump(model, f'{model_folder}/model.joblib')
+    with open(f'{model_folder}/hyperparameters.json', 'w') as f:
         json.dump(hyperparameters, f)
-    with open(f'{folder}/metrics.json', 'w') as f:
+    with open(f'{model_folder}/metrics.json', 'w') as f:
         json.dump(metrics, f)
 
 def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): #TODO Need a random seed? and add the SGD regressor
-    folder_names = ['decision_tree', 'random_forest', 'gradient_boost']
-    ml_models = [DecisionTreeRegressor(), RandomForestRegressor(), GradientBoostingRegressor()]
+    #TODO add docstring
+
+    sgd_hyperparameters= {
+        'penalty': ['l2', 'l1','elasticnet', 'none'],
+        'alpha': [0.1, 0.01, 0.001, 0.0001],
+        'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9 ],
+        'max_iter': [500, 750, 1000, 1250, 1500],
+        'learning_rate': ['constant', 'optimal', 'invscalling', 'adaptive'],
+        'earl_stopping': ['True', 'False']
+    }
 
     decision_tree_hyperparameters = {
     'max_depth': [10, 20, 50],
@@ -178,21 +195,31 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
         'min_samples_leaf': [1, 3, 5, 7]
     }
     model_hyperparameters = [decision_tree_hyperparameters, random_forest_hyperparameters, gradient_boost_hyperparameters]
+
+    models_dict = {
+        'SGD Regressor': [SGDRegressor(), sgd_hyperparameters],
+        'Decision Tree Regressor': [DecisionTreeRegressor(), decision_tree_hyperparameters],
+        'Random Forest Regressor': [RandomForestRegressor(), random_forest_hyperparameters],
+        'Gradient Boosting Regressor': [GradientBoostingRegressor(), gradient_boost_hyperparameters]
+
+    }
    
     # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
-    for model, folder, hyperparameters in itertools.zip_longest(ml_models, folder_names, model_hyperparameters):
+    for model_name, model, hyperparameters in models_dict.items():
         best_model, best_hyperparameters, performance_metrics = tune_regression_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
-        folder = f'./models/regression/linear_regression/{folder}'
-        save_model(best_model, best_hyperparameters, performance_metrics, folder) 
+        folder_path = f'./models/regression/linear_regression/{model_name}'
+        save_model(best_model, best_hyperparameters, performance_metrics, folder_path) 
         
 
 def find_best_model():
+    #TODO add docstring
+
     folder_names = ['decision_tree', 'random_forest', 'gradient_boost']
     best_model = None
     best_rmse = float('inf')
     best_r2 = 0
-    for model, folder in zip(os.listdir('./models/regression/linear_regression/'), folder_names):
-        with open(f'./models/regression/regression/{folder}/metrics.json') as f: #TODO is f string doesn't work, pass a list of models into the for loop
+    for model in os.listdir('./models/regression/linear_regression/'):
+        with open(f'{model}/metrics.json') as f: #TODO is f string doesn't work, pass a list of models into the for loop
             metrics = json.load(f)
             validation_r2 = metrics['validation_r2']
             validation_rmse = metrics['validation_rmse']
@@ -204,7 +231,6 @@ def find_best_model():
 
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), 'Price_Night')
-    X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y)
-    train_model(X_train, y_train, X_test, y_test, X_validation, y_validation)   
+    X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y) 
     evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation)
     find_best_model()
