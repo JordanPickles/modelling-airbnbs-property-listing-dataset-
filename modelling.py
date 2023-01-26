@@ -22,8 +22,10 @@ import os
 
 def split_data(X, y):
     """This function splits the data into a train, test and validate samples at a rate of 70%, 15% and 15% resepctively.
-    Input: tuples contatining features and labels in numerical form
-    Output: 3 datasets containing tuples of features and labels from the original dataframe"""
+    Input: 
+        tuples contatining features and labels in numerical form
+    Output: 
+        3 datasets containing tuples of features and labels from the original dataframe"""
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3)
 
     print("Number of samples in:")
@@ -77,7 +79,24 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     return validation_mse, validation_rmse, validation_r2
     
 def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
-    #TODO add docstring
+    """This function is used to tune the hyperparameters of a regression model by iterating through all possible permutations of the input hyperparameters. The function takes in a model class, training, testing and validation data, as well as a dictionary of hyperparameters and their possible values. The function returns the best model, the best set of hyperparameters and a dictionary of performance metrics.
+
+    Inputs:
+        - model_class (class): a model class to be used in the function
+        - X_train (np.ndarray): a numpy array of feature values for training
+        - y_train (np.ndarray): a numpy array of label values for training
+        - X_test (np.ndarray): a numpy array of feature values for testing
+        - y_test (np.ndarray): a numpy array of label values for testing
+        - X_validation (np.ndarray): a numpy array of feature values for validation
+        - y_validation (np.ndarray): a numpy array of label values for validation
+        - hyperparameters (dict): a dictionary of hyperparameters and their possible values
+
+    Returns:
+        - best_model : best model
+        - best_hyperparameters (dict): a dictionary containing the best hyperparameters
+        - performance_metrics (dict): a dictionary containing the performance metrics
+
+    """
 
     best_model = None
     best_hyperparameters = {}
@@ -117,7 +136,23 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
     return best_model, best_hyperparameters, performance_metrics
 
 def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
-    #TODO add docstring
+    """
+    This function takes in a regression model class, training, testing and validation datasets, and a dictionary of hyperparameters to tune. It then uses GridSearchCV to find the best hyperparameters for the model, and returns the best model, the best hyperparameters, and performance metrics (validation and test rmse, r2, and mae).
+
+    Inputs:
+        model_class: a regression model class (e.g. RandomForestRegressor)
+        X_train: training set of features
+        y_train: training set of labels
+        X_test: testing set of features
+        y_test: testing set of labels
+        X_validation: validation set of features
+        y_validation: validation set of labels
+        hyperparameters: dictionary of hyperparameters to tune
+    Outputs:
+        best_model: an instance of the model_class, with the best hyperparameters found
+        best_hyperparameters: a dictionary of the best hyperparameters found
+        performance_metrics: a dictionary of performance metrics (validation and test rmse, r2, and mae)
+    """
 
     performance_metrics = {}
     
@@ -151,7 +186,12 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
     return best_model, best_hyperparameters, performance_metrics
 
 def save_model(model, hyperparameters, metrics, model_folder):
-    #TODO add docstring
+    """This function saves a trained model, its associated hyperparameters and performance metrics to a specified folder.
+    Inputs:
+        model: A trained machine learning model
+        hyperparameters: A dictionary of the best hyperparameters used to train the model
+        metrics: A dictionary of the performance metrics of the model on test and validation sets
+        model_folder: A string specifying the directory path where the model and associated files will be saved."""
 
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
@@ -163,15 +203,25 @@ def save_model(model, hyperparameters, metrics, model_folder):
         json.dump(metrics, f)
 
 def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): #TODO Need a random seed? and add the SGD regressor
-    #TODO add docstring
+    """This function evaluate different regression models by tuning the hyperparameters and then saving the best models, hyperparameters and performance metrics to specific folder.
+
+    Inputs:
+        X_train: A numpy array or pandas dataframe, representing the training set for the independent variables.
+        y_train: A numpy array or pandas dataframe, representing the training set for the dependent variable.
+        X_test: A numpy array or pandas dataframe, representing the testing set for the independent variables.
+        y_test: A numpy array or pandas dataframe, representing the testing set for the dependent variable.
+        X_validation: A numpy array or pandas dataframe, representing the validation set for the independent variables.
+        y_validation: A numpy array or pandas dataframe, representing the validation set for the dependent variable.
+    
+    Outputs:
+        It saves the best models, hyperparameters and performance metrics of all evaluated models to specific folder."""
 
     sgd_hyperparameters= {
-        'penalty': ['l2', 'l1','elasticnet', 'none'],
+        'penalty': ['l2', 'l1','elasticnet'],
         'alpha': [0.1, 0.01, 0.001, 0.0001],
         'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9 ],
-        'max_iter': [500, 750, 1000, 1250, 1500],
-        'learning_rate': ['constant', 'optimal', 'invscalling', 'adaptive'],
-        'earl_stopping': ['True', 'False']
+        'max_iter': [500, 1000, 1500, 2000],
+        'learning_rate': ['constant', 'optimal', 'invscaling', 'adaptive']
     }
 
     decision_tree_hyperparameters = {
@@ -205,29 +255,38 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
     }
    
     # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
-    for model_name, model, hyperparameters in models_dict.items():
+    for key, values in models_dict.items(): #TODO - should a random seed be included here?
+        model, hyperparameters = values
         best_model, best_hyperparameters, performance_metrics = tune_regression_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
-        folder_path = f'./models/regression/linear_regression/{model_name}'
+        folder_path = f'./models/regression/linear_regression/{key}'
         save_model(best_model, best_hyperparameters, performance_metrics, folder_path) 
         
 
 def find_best_model():
-    #TODO add docstring
-
-    folder_names = ['decision_tree', 'random_forest', 'gradient_boost']
+    """This function compares the Root Mean Squared Error (RMSE) of the trained models on validation set and returns the model with the lowest RMSE.
+    Inputs:
+        None
+    Outputs:
+        Prints the model name with the lowest RMSE
+    """"
+    models = ['SGD Regressor', 'Decision Tree Regressor', 'Random Forest Regressor', 'Gradient Boosting Regressor']
     best_model = None
     best_rmse = float('inf')
     best_r2 = 0
-    for model in os.listdir('./models/regression/linear_regression/'):
-        with open(f'{model}/metrics.json') as f: #TODO is f string doesn't work, pass a list of models into the for loop
+    for model in models:
+        with open(f'./models/regression/linear_regression/{model}/metrics.json') as f: 
             metrics = json.load(f)
             validation_r2 = metrics['validation_r2']
             validation_rmse = metrics['validation_rmse']
             validation_mae = metrics['validation_mae']
+            print(f'{model}: RMSE: {validation_rmse}')
 
             if validation_rmse < best_rmse:
                 best_rsme = validation_rmse
                 best_model = model
+
+    
+    return print('The model with the lowest RMSE is: {best_model}')
 
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), 'Price_Night')
