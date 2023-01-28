@@ -41,7 +41,7 @@ def split_data(X, y):
 
     return X_train, y_train, X_test, y_test, X_validation, y_validation
 
-def normalise_data(): #TODO normalise the data - find best practice
+def normalise_data(): #TODO Does this data need normalising before being used in the model?
     pass
 
 def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
@@ -202,7 +202,7 @@ def save_model(model, hyperparameters, metrics, model_folder):
     with open(f'{model_folder}/metrics.json', 'w') as f:
         json.dump(metrics, f)
 
-def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): #TODO Need a random seed? and add the SGD regressor
+def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): 
     """This function evaluate different regression models by tuning the hyperparameters and then saving the best models, hyperparameters and performance metrics to specific folder.
 
     Inputs:
@@ -268,7 +268,7 @@ def find_best_model():
         None
     Outputs:
         Prints the model name with the lowest RMSE
-    """"
+    """
     models = ['SGD Regressor', 'Decision Tree Regressor', 'Random Forest Regressor', 'Gradient Boosting Regressor']
     best_model = None
     best_rmse = float('inf')
