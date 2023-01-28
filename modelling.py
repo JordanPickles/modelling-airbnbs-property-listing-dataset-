@@ -193,6 +193,7 @@ def save_model(model, hyperparameters, metrics, model_folder):
         metrics: A dictionary of the performance metrics of the model on test and validation sets
         model_folder: A string specifying the directory path where the model and associated files will be saved."""
 
+    
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
 
@@ -253,7 +254,15 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
         'Gradient Boosting Regressor': [GradientBoostingRegressor(), gradient_boost_hyperparameters]
 
     }
-   
+    
+    # Create required directories to save the models to   
+    if not os.path.exists('./models'):
+        os.makedirs('./models')
+    if not os.path.exists('./models/regression'):
+        os.makedirs('./models/regression')
+    if not os.path.exists('./models/regression/linear_regression'):
+        os.makedirs('./models/regression/linear_regression')
+
     # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
     for key, values in models_dict.items(): #TODO - should a random seed be included here?
         model, hyperparameters = values
