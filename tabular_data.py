@@ -45,9 +45,11 @@ def clean_tabular_data(df):
 def load_airbnb(df, label: str) -> tuple:
     """This function prepares the data to be used in a ML model returning a features and values tuple
     Output:Tuple of features and labels of fields with non-text data"""
-    df = df.drop(labels = ['ID', 'Category', 'Title', 'Description', 'Amenities', 'Location', 'url'], axis = 1)
-    features = df.drop(label, axis = 1)
     labels = df[label]
+    features = df.drop(['ID', 'Category', 'Title', 'Description', 'Amenities', 'Location', 'url'], axis = 1)
+    if label in df.columns:
+        features = df.drop(label, axis = 1)
+    
 
     return features, labels
 
