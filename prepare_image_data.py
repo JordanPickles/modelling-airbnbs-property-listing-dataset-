@@ -3,7 +3,7 @@ from PIL import Image
 
 
 def resize_images(base_dir, processed_images_dir):
-    """This function opens the image, checks all images are in RGB format and resizes all images in to the same heigh as the smallest images heigh whilst maintaing the aspect ratio of the image, before saving the image in a processed_images folder.
+    """This function opens the image, checks all images are in RGB format and resizes all images in to the same height whilst maintaing the aspect ratio of the image, before saving the image in a processed_images folder.
         base_dir: requires the base directory where all the folders containing the image is stored on the local machine
         processed_images_dir: provides the directory of where the processed photos will be saved"""
 
