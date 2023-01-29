@@ -114,7 +114,7 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
         validation_predictions = model.predict(X_validation)
         validation_rmse = sqrt(mean_squared_error(validation_predictions, y_validation))
 
-        if val_rmse < best_val_rmse:
+        if validation_rmse < best_validation_rmse:
             best_model = model
             best_hyperparameters = params
             best_val_rmse = validation_rmse
