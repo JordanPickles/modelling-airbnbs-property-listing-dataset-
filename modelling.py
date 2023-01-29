@@ -3,13 +3,9 @@ import numpy as np
 from sklearn.linear_model import SGDRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-
-
-from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from tabular_data import load_airbnb
 from math import sqrt
 import itertools
@@ -26,6 +22,9 @@ def split_data(X, y):
         tuples contatining features and labels in numerical form
     Output: 
         3 datasets containing tuples of features and labels from the original dataframe"""
+    print(X)
+    print(y)
+    
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3)
 
     print("Number of samples in:")
@@ -101,7 +100,7 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
     best_model = None
     best_hyperparameters = {}
     performance_metrics = {} 
-    best_val_rmse = float('inf')
+    best_validation_rmse = float('inf')
 
     # Provides all possible permutations of hyperparameter combinations
     keys = hyperparameters.keys()
@@ -112,13 +111,13 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
     for params in hyperparameter_combinations:
         model = model_class(**params)
         model.fit(X_train, y_train)
-        val_predictions = model.predict(X_validation)
-        val_rmse = sqrt(mean_squared_error(val_predictions, y_validation))
+        validation_predictions = model.predict(X_validation)
+        validation_rmse = sqrt(mean_squared_error(validation_predictions, y_validation))
 
         if val_rmse < best_val_rmse:
             best_model = model
             best_hyperparameters = params
-            best_val_rmse = val_rmse
+            best_val_rmse = validation_rmse
 
     # Provides test metrics
     y_test_pred = best_model.predict(X_test)
@@ -127,7 +126,7 @@ def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, 
     test_mae = mean_absolute_error(y_test, y_test_pred)
 
     # Map metrics to the performance metrics  
-    performance_metrics['validation_rmse'] = best_val_rmse
+    performance_metrics['validation_rmse'] = validation_rmse
     performance_metrics['test_rmse'] = test_rmse
     performance_metrics['test_r_squared'] = test_r2
     performance_metrics['test_mae'] = test_mae
@@ -163,10 +162,10 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
     best_hyperparameters = grid_search.best_params_
 
     # Provides Validation Metrics
-    y_val_pred = best_model.predict(X_validation)
-    best_validation_rmse = sqrt(-grid_search.best_score_)
-    validation_r2 = r2_score(y_validation, y_val_pred)
-    validation_mae = mean_absolute_error(y_validation, y_val_pred)
+    y_validation_pred = best_model.predict(X_validation)
+    validation_rmse = sqrt(mean_squared_error(y_validation, y_validation_pred))
+    validation_r2 = r2_score(y_validation, y_validation_pred)
+    validation_mae = mean_absolute_error(y_validation, y_validation_pred)
 
     # Provides test metrics
     y_test_pred = best_model.predict(X_test)
@@ -176,7 +175,7 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
 
     
     # Map metrics to the performance metrics 
-    performance_metrics['validation_rmse'] = best_validation_rmse
+    performance_metrics['validation_rmse'] = validation_rmse
     performance_metrics['validation_r2'] = validation_r2
     performance_metrics['validation_mae'] = validation_mae
     performance_metrics['test_rmse'] = test_rmse 
@@ -295,7 +294,7 @@ def find_best_model():
                 best_model = model
 
     
-    return print('The model with the lowest RMSE is: {best_model}')
+    return print(f'The model with the lowest RMSE is: {best_model}')
 
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), 'Price_Night')
