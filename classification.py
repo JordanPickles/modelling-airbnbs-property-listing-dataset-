@@ -60,12 +60,19 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
     best_hyperparameters = grid_search.best_params_
 
     # Provides Validation Metrics
-    y_val_pred = best_model.predict(X_validation)
-    y_val_accuracy = best.model(X_validation)
+    y_validation_pred = best_model.predict(X_validation)
+    y_validation_accuracy = accuracy_score(y_validation, y_validation_pred)
+    y_validation_precision = precision_score(y_validation, y_validation_pred)
+    y_validation_recall = recall_score(y_validation, y_validation_pred)
+    y_validation_f1 = f1_score(y_validation, y_validation_pred)
 
 
     # Provides test metrics
-    y_test_pred = best_model.predict(X_test)
+    y_test_pred = best_model.predict(X_test)    
+    y_test_accuracy = accuracy_score(y_test, y_test_pred)
+    y_test_precision = precision_score(y_test, y_test_pred)
+    y_test_recall = recall_score(y_test, y_test_pred)
+    y_test_f1 = f1_score(y_test, y_test_pred)
 
 
     

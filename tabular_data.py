@@ -47,7 +47,7 @@ def load_airbnb(df, label: str) -> tuple:
     """This function prepares the data to be used in a ML model returning a features and values tuple
     Output:Tuple of features and labels of fields with non-text data"""
     df.drop(df.columns[0], axis =1)
-    labels = df[label].values
+    labels = df[label]
     features = df.select_dtypes(include=['int64', 'float64']).values
     if label in features:
         features = features.drop([label])
