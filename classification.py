@@ -57,11 +57,7 @@ def classification_model(X_train, y_train, X_test, y_test, X_validation, y_valid
 def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
     performance_metrics = {}
     
-<<<<<<< HEAD
-    grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'f1_score', cv = 5) 
-=======
-    grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'accuracy', cv = 5) 
->>>>>>> 21a32e2b5e48dff508e288bd43b21b6068fdb427
+    grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'f1_micro', cv = 5) 
     grid_search.fit(X_train, y_train)
 
     best_model = grid_search.best_estimator_
@@ -70,37 +66,27 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
     # Provides Validation Metrics
     y_validation_pred = best_model.predict(X_validation)
     y_validation_accuracy = accuracy_score(y_validation, y_validation_pred)
-    y_validation_precision = precision_score(y_validation, y_validation_pred)
-    y_validation_recall = recall_score(y_validation, y_validation_pred)
-    y_validation_f1 = f1_score(y_validation, y_validation_pred)
+    y_validation_precision = precision_score(y_validation, y_validation_pred, average='micro')
+    y_validation_recall = recall_score(y_validation, y_validation_pred, average='micro')
+    y_validation_f1 = f1_score(y_validation, y_validation_pred, average='micro')
 
     # Provides test metrics
     y_test_pred = best_model.predict(X_test)    
     y_test_accuracy = accuracy_score(y_test, y_test_pred)
-    y_test_precision = precision_score(y_test, y_test_pred)
-    y_test_recall = recall_score(y_test, y_test_pred)
-    y_test_f1 = f1_score(y_test, y_test_pred)
+    y_test_precision = precision_score(y_test, y_test_pred, average='micro')
+    y_test_recall = recall_score(y_test, y_test_pred, average='micro')
+    y_test_f1 = f1_score(y_test, y_test_pred, average='micro')
 
     # Maps metrics to the performance metrics dict
-    performance_metrics['Validation Accuracy'] = y_validation_accuracy
-    performance_metrics['Validation Precision'] = y_validation_precision
-    performance_metrics['Validation Recall'] = y_validation_recall
-    performance_metrics['Validation F1 Score'] = y_validation_f1
+    performance_metrics['validation_accuracy'] = y_validation_accuracy
+    performance_metrics['validation_precision'] = y_validation_precision
+    performance_metrics['validation_recall'] = y_validation_recall
+    performance_metrics['validation_f1_score'] = y_validation_f1
 
-<<<<<<< HEAD
-=======
-    # Map metrics to the performance metrics 
-    performance_metrics['Validation Accuracy'] = y_validation_accuracy
-    performance_metrics['Validation Precision'] = y_validation_precision
-    performance_metrics['Validation Recall'] = y_validation_recall
-    performance_metrics['Validation F1 Score'] = y_validation_f1
-
->>>>>>> 21a32e2b5e48dff508e288bd43b21b6068fdb427
-    performance_metrics['Test Accuracy'] = y_test_accuracy
-    performance_metrics['Test Precision'] = y_test_precision
-    performance_metrics['Test Recall'] = y_test_recall
-    performance_metrics['Test F1 Score'] = y_test_f1
-<<<<<<< HEAD
+    performance_metrics['test_accuracy'] = y_test_accuracy
+    performance_metrics['test_precision'] = y_test_precision
+    performance_metrics['test_recall'] = y_test_recall
+    performance_metrics['test_f1_score'] = y_test_f1
     
     return best_model, best_hyperparameters, performance_metrics
 
@@ -114,70 +100,86 @@ def save_model(model, hyperparameters, metrics, model_folder):
         json.dump(hyperparameters, f)
     with open(f'{model_folder}/metrics.json', 'w') as f:
         json.dump(metrics, f)
-=======
-
-    
-    return best_model, best_hyperparameters, performance_metrics
-
-
->>>>>>> 21a32e2b5e48dff508e288bd43b21b6068fdb427
 
 
 def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): 
     #TODO add docstrings
     
-    # TODO Add Hyperparameters for random forest, decision tree and gradient boosting classifier mechanisms
-    logistic_regression = {}
-
-
-
-    # TODO Add dict of models
-    classifier_models_dict = {'Logistic Regression': []}
+    # Adds Hyperparameters for hyperparameter for each model
+    logistic_regression_hyperparameters = {
+        'penalty': ['l1', 'l2', 'elasticnet'],
+        'max_iter': [100, 1000, 10000],
+        'solver': ['lbfgs', 'newton-cg', 'sag', 'saga']
+    }
+    decision_tree_classifier_hyperparameters = {
+        'criterion': ['gini', 'entropy', 'log_loss'],
+        'splitter': ['best', 'random'],
+        'max_depth': [10, 20, 50], #TODO what is a good number?
+        'min_samples_split': [2, 4, 6, 8],
+        'min_samples_leaf': [1, 2, 3, 4],
+    }
+    random_forest_classifier_hyperparameters = {
+        'n_estimators': [50, 100, 200],
+        'criterion': ['gini', 'entropy', 'log_loss'],
+        'max_depth': [10, 20, 50],
+        'min_samples_split': [2, 4, 6,8],
+        'min_samples_leaf': [1, 2, 3, 4]
+    }
+    gradient_boosting_classifier_hyperparameters = {
+        'criterion': ['friedman_mse', 'squared_error'],
+        'min_samples_split': [2, 4, 6, 8],
+        'min_samples_leaf': [1, 2, 3, 4],
+        'max_depth': [2, 3, 4, 5]
+    }
+    
+    # Adds models to a dict to be iterated through
+    classification_models_dict = {
+        'Logistic Regression': [LogisticRegression(),logistic_regression_hyperparameters], 
+        'Decision Tree Classifier': [DecisionTreeClassifier() ,decision_tree_classifier_hyperparameters], 
+        'Random Forest Classifier': [RandomForestClassifier(), random_forest_classifier_hyperparameters], 
+        'Gradient Boosting Classifier': [GradientBoostingClassifier() ,gradient_boosting_classifier_hyperparameters]
+    }
     
     # Create required directories to save the models to   
     if not os.path.exists('./models'):
         os.makedirs('./models')
-    if not os.path.exists('./models/regression'):
-        os.makedirs('./models/regression')
-    if not os.path.exists('./models/regression/logistic_regression'):
-        os.makedirs('./models/regression/logistic_regression')
+    if not os.path.exists('./models/classification'):
+        os.makedirs('./models/classification')
+  
 
     # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
-    for key, values in models_dict.items(): #TODO - should a random seed be included here?
+    for key, values in classification_models_dict.items(): #TODO - should a random seed be included here?
         model, hyperparameters = values
         best_model, best_hyperparameters, performance_metrics = tune_classification_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
-        folder_path = f'./models/regression/logistic_regression/{key}'
+        folder_path = f'./models/classification/{key}'
         save_model(best_model, best_hyperparameters, performance_metrics, folder_path) 
         
 
-def find_best_model(): # TODO needs to take in a keyword argument called task_folder
-    """This function compares the Root Mean Squared Error (RMSE) of the trained models on validation set and returns the model with the lowest RMSE.
-    Inputs:
-        None
-    Outputs:
-        Prints the model name with the lowest RMSE
-    """
-    #TODO change the models
+def find_best_model(): 
+
+    
     models = ['Logistic Regression', 'Decision Tree Classifier', 'Random Forest Classifier', 'Gradient Boosting Classifier']
     best_model = None
-    best_rmse = float('inf') # Change the metric to accuracy or f1
+    best_f1_score= float('inf') # Change the metric to accuracy or f1
     
     for model in models:
-        with open(f'./models/regression/logistic_regression/{model}/metrics.json') as f: 
+        with open(f'./models/classification/{model}/metrics.json') as f: 
             metrics = json.load(f)
+            validation_acuracy = metrics['validation_accuracy']
+            validation_recall = metrics['validation_recall']
+            validation_precision = metrics['validation_precision']
+            validation_f1_score = metrics['validation_f1_score']
+            print(f'{model}: F1 score: {validation_f1_score}')
 
-            # TODO Change metrics to classifcation relevant
-            validation_r2 = metrics['validation_r2']
-            validation_rmse = metrics['validation_rmse']
-            validation_mae = metrics['validation_mae']
-            print(f'{model}: RMSE: {validation_rmse}')
-
-            # TODO Adapt to correct metrics
-            if validation_rmse < best_rmse:
-                best_rsme = validation_rmse
+            if validation_f1_score < best_f1_score:
+                best_f1_score = validation_f1_score
                 best_model = model
+
+    return print(f'The model with the lowest F1 Score is: {best_model}')
+
 
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), "Category")
-    X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y)  
-    classification_model(X_train, y_train, X_test, y_test, X_validation, y_validation)
+    X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y)
+    evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation)
+    find_best_model()

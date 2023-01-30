@@ -216,7 +216,7 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
     Outputs:
         It saves the best models, hyperparameters and performance metrics of all evaluated models to specific folder."""
 
-    sgd_hyperparameters= {
+    sgd_hyperparameters = {
         'penalty': ['l2', 'l1','elasticnet'],
         'alpha': [0.1, 0.01, 0.001, 0.0001],
         'l1_ratio': [0.1, 0.3, 0.5, 0.7, 0.9 ],
