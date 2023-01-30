@@ -57,7 +57,11 @@ def classification_model(X_train, y_train, X_test, y_test, X_validation, y_valid
 def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
     performance_metrics = {}
     
+<<<<<<< HEAD
     grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'f1_score', cv = 5) 
+=======
+    grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'accuracy', cv = 5) 
+>>>>>>> 21a32e2b5e48dff508e288bd43b21b6068fdb427
     grid_search.fit(X_train, y_train)
 
     best_model = grid_search.best_estimator_
@@ -83,10 +87,20 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
     performance_metrics['Validation Recall'] = y_validation_recall
     performance_metrics['Validation F1 Score'] = y_validation_f1
 
+<<<<<<< HEAD
+=======
+    # Map metrics to the performance metrics 
+    performance_metrics['Validation Accuracy'] = y_validation_accuracy
+    performance_metrics['Validation Precision'] = y_validation_precision
+    performance_metrics['Validation Recall'] = y_validation_recall
+    performance_metrics['Validation F1 Score'] = y_validation_f1
+
+>>>>>>> 21a32e2b5e48dff508e288bd43b21b6068fdb427
     performance_metrics['Test Accuracy'] = y_test_accuracy
     performance_metrics['Test Precision'] = y_test_precision
     performance_metrics['Test Recall'] = y_test_recall
     performance_metrics['Test F1 Score'] = y_test_f1
+<<<<<<< HEAD
     
     return best_model, best_hyperparameters, performance_metrics
 
@@ -100,6 +114,13 @@ def save_model(model, hyperparameters, metrics, model_folder):
         json.dump(hyperparameters, f)
     with open(f'{model_folder}/metrics.json', 'w') as f:
         json.dump(metrics, f)
+=======
+
+    
+    return best_model, best_hyperparameters, performance_metrics
+
+
+>>>>>>> 21a32e2b5e48dff508e288bd43b21b6068fdb427
 
 
 def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): 
