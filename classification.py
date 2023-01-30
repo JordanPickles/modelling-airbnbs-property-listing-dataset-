@@ -53,7 +53,7 @@ def classification_model(X_train, y_train, X_test, y_test, X_validation, y_valid
 def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
     performance_metrics = {}
     
-    grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'neg_mean_squared_error', cv = 5) 
+    grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'accuracy', cv = 5) 
     grid_search.fit(X_train, y_train)
 
     best_model = grid_search.best_estimator_
@@ -75,30 +75,21 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
     y_test_f1 = f1_score(y_test, y_test_pred)
 
 
-    
     # Map metrics to the performance metrics 
-    performance_metrics
+    performance_metrics['Validation Accuracy'] = y_validation_accuracy
+    performance_metrics['Validation Precision'] = y_validation_precision
+    performance_metrics['Validation Recall'] = y_validation_recall
+    performance_metrics['Validation F1 Score'] = y_validation_f1
+
+    performance_metrics['Test Accuracy'] = y_test_accuracy
+    performance_metrics['Test Precision'] = y_test_precision
+    performance_metrics['Test Recall'] = y_test_recall
+    performance_metrics['Test F1 Score'] = y_test_f1
 
     
     return best_model, best_hyperparameters, performance_metrics
 
-def save_model(model, hyperparameters, metrics, model_folder):
-    """This function saves a trained model, its associated hyperparameters and performance metrics to a specified folder.
-    Inputs:
-        model: A trained machine learning model
-        hyperparameters: A dictionary of the best hyperparameters used to train the model
-        metrics: A dictionary of the performance metrics of the model on test and validation sets
-        model_folder: A string specifying the directory path where the model and associated files will be saved."""
 
-    
-    if not os.path.exists(model_folder):
-        os.makedirs(model_folder)
-
-    joblib.dump(model, f'{model_folder}/model.joblib')
-    with open(f'{model_folder}/hyperparameters.json', 'w') as f:
-        json.dump(hyperparameters, f)
-    with open(f'{model_folder}/metrics.json', 'w') as f:
-        json.dump(metrics, f)
 
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), "Category")
