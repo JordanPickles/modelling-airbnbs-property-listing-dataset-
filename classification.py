@@ -70,23 +70,12 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
     y_validation_recall = recall_score(y_validation, y_validation_pred, average='micro')
     y_validation_f1 = f1_score(y_validation, y_validation_pred, average='micro')
 
-    # Provides test metrics
-    y_test_pred = best_model.predict(X_test)    
-    y_test_accuracy = accuracy_score(y_test, y_test_pred)
-    y_test_precision = precision_score(y_test, y_test_pred, average='micro')
-    y_test_recall = recall_score(y_test, y_test_pred, average='micro')
-    y_test_f1 = f1_score(y_test, y_test_pred, average='micro')
-
     # Maps metrics to the performance metrics dict
     performance_metrics['validation_accuracy'] = y_validation_accuracy
     performance_metrics['validation_precision'] = y_validation_precision
     performance_metrics['validation_recall'] = y_validation_recall
     performance_metrics['validation_f1_score'] = y_validation_f1
 
-    performance_metrics['test_accuracy'] = y_test_accuracy
-    performance_metrics['test_precision'] = y_test_precision
-    performance_metrics['test_recall'] = y_test_recall
-    performance_metrics['test_f1_score'] = y_test_f1
     
     return best_model, best_hyperparameters, performance_metrics
 

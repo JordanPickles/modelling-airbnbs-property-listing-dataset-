@@ -167,20 +167,10 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
     validation_r2 = r2_score(y_validation, y_validation_pred)
     validation_mae = mean_absolute_error(y_validation, y_validation_pred)
 
-    # Provides test metrics
-    y_test_pred = best_model.predict(X_test)
-    test_rmse = sqrt(mean_squared_error(y_test, y_test_pred))
-    test_r2 = r2_score(y_test, y_test_pred)
-    test_mae = mean_absolute_error(y_test, y_test_pred)
-
-    
     # Map metrics to the performance metrics 
     performance_metrics['validation_rmse'] = validation_rmse
     performance_metrics['validation_r2'] = validation_r2
     performance_metrics['validation_mae'] = validation_mae
-    performance_metrics['test_rmse'] = test_rmse 
-    performance_metrics['test_r2'] = test_r2
-    performance_metrics['test_mae'] = test_mae
     
     return best_model, best_hyperparameters, performance_metrics
 
