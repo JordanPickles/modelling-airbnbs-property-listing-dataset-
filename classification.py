@@ -145,7 +145,18 @@ def save_model(model, hyperparameters, metrics, model_folder):
 
 
 def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): 
-    #TODO add docstrings
+    """This function evaluate different regression models by tuning the hyperparameters and then saving the best models, hyperparameters and performance metrics to specific folder.
+
+    Parameters:
+        X_train (Matrix): Normalized features for training
+        y_train (Vector): Lables for training
+        X_test (Matrix): Normalized features for testing
+        y_test (Vector): Lables for testing
+        X_validation (Matrix): Normalized features for validation
+        y_validation (Vector): Labels for validation
+    
+    Outputs:
+        It saves the best models, hyperparameters and performance metrics of all evaluated models to specific folder."""
     
     # Adds Hyperparameters for hyperparameter for each model
     logistic_regression_hyperparameters = {
