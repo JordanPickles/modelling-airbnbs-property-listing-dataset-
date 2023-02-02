@@ -280,7 +280,7 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
 
 ```
 
-The evaluation metrics were then assessed to find the model with the greates accuracy.
+The evaluation metrics were then assessed to find the model with the greatest accuracy.
 
 ```
 def find_best_model():
