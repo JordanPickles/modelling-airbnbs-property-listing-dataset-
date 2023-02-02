@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import SGDRegressor
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -17,20 +18,23 @@ import os
 
 
 def split_data(X, y):
-    """This function splits the data into a train, test and validate samples at a rate of 70%, 15% and 15% resepctively.
-    Input: 
-        tuples contatining features and labels in numerical form
-    Output: 
-        3 datasets containing tuples of features and labels from the original dataframe"""
-    print(X)
-    print(y)
-    
+    """Split data into train, test, and validation sets, with normalization.
+
+    Parameters:
+        X (array-like): Features
+        y (array-like): Labels
+
+    Returns:
+        Normalized X_train, y_train, X_test, y_test, X_validation, y_validation.    """
+
+    # Splits data into train and test at 70% and 30% respectively of the dataset
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3)
 
     print("Number of samples in:")
     print(f"    Training: {len(y_train)}")
     print(f"    Testing: {len(y_test)}")
 
+    # Splits the test data (30% of dataset) in half (15% for test and validation sets)
     X_test, X_validation, y_test, y_validation = train_test_split(X_test, y_test, test_size = 0.5)
 
     print("Number of samples in:")
@@ -38,10 +42,14 @@ def split_data(X, y):
     print(f"    Testing: {len(y_test)}")
     print(f"    Validation: {len(y_validation)}")
 
+    #Normalise features using MinMaxScaler
+    scaler = MinMaxScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.fit_transform(X_test)
+    X_validation = scaler.fit_transform(X_validation)
+
     return X_train, y_train, X_test, y_test, X_validation, y_validation
 
-def normalise_data(): #TODO Does this data need normalising before being used in the model?
-    pass
 
 def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     """This function fits the train data to a SGD regression model tests the error level of the model on the train, test and validation datasets
@@ -251,6 +259,8 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
         os.makedirs('./models/regression')
     if not os.path.exists('./models/regression/linear_regression'):
         os.makedirs('./models/regression/linear_regression')
+
+    np.random.seed(2)
 
     # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
     for key, values in models_dict.items(): #TODO - should a random seed be included here?
