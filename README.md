@@ -320,4 +320,147 @@ if __name__ == "__main__":
     find_best_model()
 ```
 
+## Milestone 3 
+
+This model added a classifier model to make predictions on the property category by training classification models. The models trained and evaluated included; Logistic Regression, Decision Tree, Gradient Boosting Classifier and Random Forest Classifier.
+
+To develop this module, several functions were adapted from the linear regression model, the primary changes are with the error measure of the model and the evaluation metrics used, f1_micro was the scoring measure for the grid search conducted.
+
+```
+def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
+    """
+    This function performs hyperparameter tuning for a classification model and returns the best model, its hyperparameters, and its performance metrics on a validation set. 
     
+    Parameters:
+    model_class (class): A class for a scikit-learn classifier that implements `fit` and `predict` methods.
+    X_train (Matrix): Normalized features for training
+    y_train (Vector): Lables for training
+    X_test (Matrix): Normalized features for testing
+    y_test (Vector): Lables for testing
+    X_validation (Matrix): Normalized features for validation
+    y_validation (Vector): Labels for validation
+    hyperparameters (dict): The hyperparameters to be tested by GridSearchCV.
+    
+    Returns:
+    best_model (scikit-learn classifier instance): The best classifier instance after tuning hyperparameters.
+    best_hyperparameters (dict): The best hyperparameters obtained from GridSearchCV.
+    performance_metrics (dict): A dictionary of performance metrics of the best model on the validation set. The metrics include:
+        - validation_accuracy (float): Accuracy score of the model on the validation set.
+        - validation_precision (float): Precision score of the model on the validation set.
+        - validation_recall (float): Recall score of the model on the validation set.
+        - validation_f1_score (float): F1 score of the model on the validation set.
+    """
+    
+    performance_metrics = {}
+    
+    grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'f1_micro', cv = 5) 
+    grid_search.fit(X_train, y_train)
+
+    best_model = grid_search.best_estimator_
+    best_hyperparameters = grid_search.best_params_
+
+    # Provides Validation Metrics
+    y_validation_pred = best_model.predict(X_validation)
+    y_validation_accuracy = accuracy_score(y_validation, y_validation_pred)
+    y_validation_precision = precision_score(y_validation, y_validation_pred, average='micro')
+    y_validation_recall = recall_score(y_validation, y_validation_pred, average='micro')
+    y_validation_f1 = f1_score(y_validation, y_validation_pred, average='micro')
+
+    # Maps metrics to the performance metrics dict
+    performance_metrics['validation_accuracy'] = y_validation_accuracy
+    performance_metrics['validation_precision'] = y_validation_precision
+    performance_metrics['validation_recall'] = y_validation_recall
+    performance_metrics['validation_f1_score'] = y_validation_f1
+
+    
+    return best_model, best_hyperparameters, performance_metrics
+
+
+```
+
+Hyperparameters were set for the Logistic Regression, Decision Tree, Random Forest and Gradient Boosting classifiers. The hyperparameter tuning was conudcted using GridSearch and then the optimised model was trained and used to predict values of the validation set by calling the tune_classification_model_hyperparameters() function.
+
+```
+def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): 
+    
+    
+    # Adds Hyperparameters for hyperparameter for each model
+    logistic_regression_hyperparameters = {
+        'penalty': ['l1', 'l2', 'elasticnet'],
+        'max_iter': [100, 1000, 10000],
+        'solver': ['lbfgs', 'newton-cg', 'sag', 'saga']
+    }
+    decision_tree_classifier_hyperparameters = {
+        'criterion': ['gini', 'entropy', 'log_loss'],
+        'splitter': ['best', 'random'],
+        'max_depth': [10, 20, 50], #TODO what is a good number?
+        'min_samples_split': [2, 4, 6, 8],
+        'min_samples_leaf': [1, 2, 3, 4],
+    }
+    random_forest_classifier_hyperparameters = {
+        'n_estimators': [50, 100, 200],
+        'criterion': ['gini', 'entropy', 'log_loss'],
+        'max_depth': [10, 20, 50],
+        'min_samples_split': [2, 4, 6,8],
+        'min_samples_leaf': [1, 2, 3, 4]
+    }
+    gradient_boosting_classifier_hyperparameters = {
+        'criterion': ['friedman_mse', 'squared_error'],
+        'min_samples_split': [2, 4, 6, 8],
+        'min_samples_leaf': [1, 2, 3, 4],
+        'max_depth': [2, 3, 4, 5]
+    }
+    
+    # Adds models to a dict to be iterated through
+    classification_models_dict = {
+        'Logistic Regression': [LogisticRegression(),logistic_regression_hyperparameters], 
+        'Decision Tree Classifier': [DecisionTreeClassifier() ,decision_tree_classifier_hyperparameters], 
+        'Random Forest Classifier': [RandomForestClassifier(), random_forest_classifier_hyperparameters], 
+        'Gradient Boosting Classifier': [GradientBoostingClassifier() ,gradient_boosting_classifier_hyperparameters]
+    }
+    
+    # Create required directories to save the models to   
+    if not os.path.exists('./models'):
+        os.makedirs('./models')
+    if not os.path.exists('./models/classification'):
+        os.makedirs('./models/classification')
+  
+
+    # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
+    for key, values in classification_models_dict.items(): #TODO - should a random seed be included here?
+        model, hyperparameters = values
+        best_model, best_hyperparameters, performance_metrics = tune_classification_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
+        folder_path = f'./models/classification/{key}'
+        save_model(best_model, best_hyperparameters, performance_metrics, folder_path) 
+```
+
+To evaluate the performance of the models, F1 error score was used to evaluate the model performance.
+
+```
+def find_best_model(): 
+    """This function compares the Root Mean Squared Error (RMSE) of the trained models on validation set and returns the model with the lowest RMSE.
+    Parameters:
+        None
+    Outputs:
+        Prints the model name with the lowest RMSE
+    """
+    
+    models = ['Logistic Regression', 'Decision Tree Classifier', 'Random Forest Classifier', 'Gradient Boosting Classifier']
+    best_model = None
+    best_f1_score= float('inf') # Change the metric to accuracy or f1
+    
+    for model in models:
+        with open(f'./models/classification/{model}/metrics.json') as f: 
+            metrics = json.load(f)
+            validation_acuracy = metrics['validation_accuracy']
+            validation_recall = metrics['validation_recall']
+            validation_precision = metrics['validation_precision']
+            validation_f1_score = metrics['validation_f1_score']
+            print(f'{model}: F1 score: {validation_f1_score}')
+
+            if validation_f1_score < best_f1_score:
+                best_f1_score = validation_f1_score
+                best_model = model
+
+    return print(f'The model with the lowest F1 Score is: {best_model}')
+```
