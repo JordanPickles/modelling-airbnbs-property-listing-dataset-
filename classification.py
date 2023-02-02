@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from tabular_data import load_airbnb
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
@@ -15,11 +16,14 @@ import joblib
 import json
 
 def split_data(X, y):
-    """This function splits the data into a train, test and validate samples at a rate of 70%, 15% and 15% resepctively.
-    Input: 
-        tuples contatining features and labels in numerical form
-    Output: 
-        3 datasets containing tuples of features and labels from the original dataframe"""
+    """Split data into train, test, and validation sets, with normalization.
+
+    Parameters:
+        X (Matrix): Features
+        y (Vector): Labels
+
+    Returns:
+        Normalized X_train, y_train, X_test, y_test, X_validation, y_validation.    """
 
     binariser = LabelBinarizer()  
     #Encodes the labels
@@ -31,10 +35,30 @@ def split_data(X, y):
     #Splits the test data into test and validation set at 15% each
     X_test, X_validation, y_test, y_validation = train_test_split(X_test, y_test, test_size = 0.5)
 
+    #Normalise features using MinMaxScaler
+    scaler = MinMaxScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.fit_transform(X_test)
+    X_validation = scaler.fit_transform(X_validation)
+
     return X_train, y_train, X_test, y_test, X_validation, y_validation
 
 
 def classification_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
+    """Train and evaluate a logistic regression model on the input train and test data.
+
+    Parameters:
+    X_train (Matrix): Normalized features for training
+    y_train (Vector): Lables for training
+    X_test (Matrix): Normalized features for testing
+    y_test (Vector): Lables for testing
+    X_validation (Matrix): Normalized features for validation
+    y_validation (Vector): Labels for validation
+
+    Returns:
+    None: The function prints evaluation metrics for the logistic regression model on the train and test data.
+    """
+
     model = LogisticRegression(max_iter=10000)
     model.fit(X_train, y_train)
 
@@ -55,6 +79,29 @@ def classification_model(X_train, y_train, X_test, y_test, X_validation, y_valid
 
 
 def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
+    """
+    This function performs hyperparameter tuning for a classification model and returns the best model, its hyperparameters, and its performance metrics on a validation set.
+    
+    Parameters:
+    model_class (class): A class for a scikit-learn classifier that implements `fit` and `predict` methods.
+    X_train (Matrix): Normalized features for training
+    y_train (Vector): Lables for training
+    X_test (Matrix): Normalized features for testing
+    y_test (Vector): Lables for testing
+    X_validation (Matrix): Normalized features for validation
+    y_validation (Vector): Labels for validation
+    hyperparameters (dict): The hyperparameters to be tested by GridSearchCV.
+    
+    Returns:
+    best_model (scikit-learn classifier instance): The best classifier instance after tuning hyperparameters.
+    best_hyperparameters (dict): The best hyperparameters obtained from GridSearchCV.
+    performance_metrics (dict): A dictionary of performance metrics of the best model on the validation set. The metrics include:
+        - validation_accuracy (float): Accuracy score of the model on the validation set.
+        - validation_precision (float): Precision score of the model on the validation set.
+        - validation_recall (float): Recall score of the model on the validation set.
+        - validation_f1_score (float): F1 score of the model on the validation set.
+    """
+    
     performance_metrics = {}
     
     grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'f1_micro', cv = 5) 
@@ -80,6 +127,12 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
     return best_model, best_hyperparameters, performance_metrics
 
 def save_model(model, hyperparameters, metrics, model_folder):
+    """This function saves a trained model, its associated hyperparameters and performance metrics to a specified folder.
+    Parameters:
+        model: Machine learning model name
+        hyperparameters: A dictionary of the best hyperparameters used to train the model
+        metrics: A dictionary of the performance metrics of the model on test and validation sets
+        model_folder: A string specifying the directory path where the model and associated files will be saved."""
     
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
@@ -145,7 +198,12 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
         
 
 def find_best_model(): 
-
+    """This function compares the Root Mean Squared Error (RMSE) of the trained models on validation set and returns the model with the lowest RMSE.
+    Parameters:
+        None
+    Outputs:
+        Prints the model name with the lowest RMSE
+    """
     
     models = ['Logistic Regression', 'Decision Tree Classifier', 'Random Forest Classifier', 'Gradient Boosting Classifier']
     best_model = None

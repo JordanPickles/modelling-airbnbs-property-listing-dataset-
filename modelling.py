@@ -21,8 +21,8 @@ def split_data(X, y):
     """Split data into train, test, and validation sets, with normalization.
 
     Parameters:
-        X (array-like): Features
-        y (array-like): Labels
+        X Matrix: Features
+        y Vector: Labels
 
     Returns:
         Normalized X_train, y_train, X_test, y_test, X_validation, y_validation.    """
@@ -88,20 +88,20 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
 def custom_tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
     """This function is used to tune the hyperparameters of a regression model by iterating through all possible permutations of the input hyperparameters. The function takes in a model class, training, testing and validation data, as well as a dictionary of hyperparameters and their possible values. The function returns the best model, the best set of hyperparameters and a dictionary of performance metrics.
 
-    Inputs:
-        - model_class (class): a model class to be used in the function
-        - X_train (np.ndarray): a numpy array of feature values for training
-        - y_train (np.ndarray): a numpy array of label values for training
-        - X_test (np.ndarray): a numpy array of feature values for testing
-        - y_test (np.ndarray): a numpy array of label values for testing
-        - X_validation (np.ndarray): a numpy array of feature values for validation
-        - y_validation (np.ndarray): a numpy array of label values for validation
-        - hyperparameters (dict): a dictionary of hyperparameters and their possible values
+    Parameters:
+        model_class (class): A class for a scikit-learn classifier that implements `fit` and `predict` methods.
+        X_train (Matrix): Normalized features for training
+        y_train (Vector): Lables for training
+        X_test (Matrix): Normalized features for testing
+        y_test (Vector): Lables for testing
+        X_validation (Matrix): Normalized features for validation
+        y_validation (Vector): Labels for validation
+        hyperparameters (dict): The hyperparameters to be tested by GridSearchCV.
 
     Returns:
-        - best_model : best model
-        - best_hyperparameters (dict): a dictionary containing the best hyperparameters
-        - performance_metrics (dict): a dictionary containing the performance metrics
+        best_model: an instance of the model_class, with the best hyperparameters found
+        best_hyperparameters (dict): a dictionary containing the best hyperparameters
+        performance_metrics (dict): a dictionary containing the performance metrics
 
     """
 
@@ -146,15 +146,16 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
     """
     This function takes in a regression model class, training, testing and validation datasets, and a dictionary of hyperparameters to tune. It then uses GridSearchCV to find the best hyperparameters for the model, and returns the best model, the best hyperparameters, and performance metrics (validation and test rmse, r2, and mae).
 
-    Inputs:
-        model_class: a regression model class (e.g. RandomForestRegressor)
-        X_train: training set of features
-        y_train: training set of labels
-        X_test: testing set of features
-        y_test: testing set of labels
-        X_validation: validation set of features
-        y_validation: validation set of labels
-        hyperparameters: dictionary of hyperparameters to tune
+    Parameters:
+        model_class (class): A class for a scikit-learn classifier that implements `fit` and `predict` methods.
+        X_train (Matrix): Normalized features for training
+        y_train (Vector): Lables for training
+        X_test (Matrix): Normalized features for testing
+        y_test (Vector): Lables for testing
+        X_validation (Matrix): Normalized features for validation
+        y_validation (Vector): Labels for validation
+        hyperparameters (dict): The hyperparameters to be tested by GridSearchCV.
+
     Outputs:
         best_model: an instance of the model_class, with the best hyperparameters found
         best_hyperparameters: a dictionary of the best hyperparameters found
@@ -184,8 +185,8 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
 
 def save_model(model, hyperparameters, metrics, model_folder):
     """This function saves a trained model, its associated hyperparameters and performance metrics to a specified folder.
-    Inputs:
-        model: A trained machine learning model
+    Parameters:
+        model: Machine learning model name
         hyperparameters: A dictionary of the best hyperparameters used to train the model
         metrics: A dictionary of the performance metrics of the model on test and validation sets
         model_folder: A string specifying the directory path where the model and associated files will be saved."""
@@ -203,13 +204,13 @@ def save_model(model, hyperparameters, metrics, model_folder):
 def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): 
     """This function evaluate different regression models by tuning the hyperparameters and then saving the best models, hyperparameters and performance metrics to specific folder.
 
-    Inputs:
-        X_train: A numpy array or pandas dataframe, representing the training set for the independent variables.
-        y_train: A numpy array or pandas dataframe, representing the training set for the dependent variable.
-        X_test: A numpy array or pandas dataframe, representing the testing set for the independent variables.
-        y_test: A numpy array or pandas dataframe, representing the testing set for the dependent variable.
-        X_validation: A numpy array or pandas dataframe, representing the validation set for the independent variables.
-        y_validation: A numpy array or pandas dataframe, representing the validation set for the dependent variable.
+    Parameters:
+        X_train (Matrix): Normalized features for training
+        y_train (Vector): Lables for training
+        X_test (Matrix): Normalized features for testing
+        y_test (Vector): Lables for testing
+        X_validation (Matrix): Normalized features for validation
+        y_validation (Vector): Labels for validation
     
     Outputs:
         It saves the best models, hyperparameters and performance metrics of all evaluated models to specific folder."""
@@ -272,7 +273,7 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
 
 def find_best_model():
     """This function compares the Root Mean Squared Error (RMSE) of the trained models on validation set and returns the model with the lowest RMSE.
-    Inputs:
+    Parameters:
         None
     Outputs:
         Prints the model name with the lowest RMSE
