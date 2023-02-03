@@ -213,11 +213,11 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
         
 
 def find_best_model(): 
-    """This function compares the Root Mean Squared Error (RMSE) of the trained models on validation set and returns the model with the lowest RMSE.
+    """This function compares the F1 error score of the trained models on validation set and returns the model with the lowest F1 score.
     Parameters:
         None
     Outputs:
-        Prints the model name with the lowest RMSE
+        Prints the model name with the lowest F1 Score
     """
     
     models = ['Logistic Regression', 'Decision Tree Classifier', 'Random Forest Classifier', 'Gradient Boosting Classifier']
