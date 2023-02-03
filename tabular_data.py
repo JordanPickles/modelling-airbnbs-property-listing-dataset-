@@ -48,11 +48,8 @@ def load_airbnb(df, label: str) -> tuple:
     Output:Tuple of features and labels of fields with non-text data"""
     df.drop(df.columns[0], axis =1)
     labels = df[label]
-    features = df.select_dtypes(include=['int64', 'float64']).values
-    if label in features:
-        features = features.drop([label])
-    else: pass
-    
+    features = df.drop(columns = [label], axis = 1)
+    features = features.select_dtypes(include=['int64', 'float64']).values  
 
     return features, labels
 
