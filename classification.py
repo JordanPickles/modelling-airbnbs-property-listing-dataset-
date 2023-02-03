@@ -25,17 +25,21 @@ def split_data(X, y):
     Returns:
         Normalized X_train, y_train, X_test, y_test, X_validation, y_validation.    """
 
-    binariser = LabelBinarizer()  
+    binariser = LabelBinarizer() 
+
     #Encodes the labels
     y_binarised = binariser.fit_transform(y.values.reshape(-1,1))
+
     # Converts array into a 1D array, notes the index of the highest number of array (positive classification) to transform the array to be 1D and passible into a model
     y_binarised = np.argmax(y_binarised, axis=1)
+
     #Splits the data into train and test data at 70% and 30% respectively
     X_train, X_test, y_train, y_test = train_test_split(X, y_binarised, test_size = 0.3)
+
     #Splits the test data into test and validation set at 15% each
     X_test, X_validation, y_test, y_validation = train_test_split(X_test, y_test, test_size = 0.5)
 
-    #Normalise features using MinMaxScaler
+    #Normalises the features using MinMaxScaler
     scaler = MinMaxScaler()
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.fit_transform(X_test)
@@ -169,7 +173,7 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
         'splitter': ['best', 'random'],
         'max_depth': [10, 20, 50], #TODO what is a good number?
         'min_samples_split': [2, 4, 6, 8],
-        'min_samples_leaf': [1, 2, 3, 4],
+        'min_samples_leaf': [1, 2, 3, 4]
     }
     random_forest_classifier_hyperparameters = {
         'n_estimators': [50, 100, 200],
@@ -201,7 +205,7 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
   
 
     # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
-    for key, values in classification_models_dict.items(): #TODO - should a random seed be included here?
+    for key, values in classification_models_dict.items(): 
         model, hyperparameters = values
         best_model, best_hyperparameters, performance_metrics = tune_classification_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
         folder_path = f'./models/classification/{key}'
@@ -218,7 +222,7 @@ def find_best_model():
     
     models = ['Logistic Regression', 'Decision Tree Classifier', 'Random Forest Classifier', 'Gradient Boosting Classifier']
     best_model = None
-    best_f1_score= float('inf') # Change the metric to accuracy or f1
+    best_f1_score= float('inf') 
     
     for model in models:
         with open(f'./models/classification/{model}/metrics.json') as f: 
