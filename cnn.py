@@ -25,26 +25,6 @@ class AirbnbNightlyPriceImageDataset(Dataset):
         return len(self.X)
 
 
-dataset = AirbnbNightlyPriceImageDataset() #Creates an instance of the class
-print(dataset[10])
-print(len(dataset))
-
-# Splits data into 70% training and 30% test
-train_dataset, test_dataset = random_split(dataset, [int(len(dataset) * 0.7), len(dataset)-int(len(dataset)*0.7)])
-
-# Splits test data in half, percentage of total dataset is 15% test and 15% validation
-validation_dataset, test_dataset = random_split(test_dataset, [int(len(test_dataset) * 0.5), len(test_dataset)-int(len(test_dataset)*0.5)])
-
-print(f"    Training: {len(train_dataset)}")
-print(f"    Validation: {len(validation_dataset)}")
-print(f"    Testing: {len(test_dataset)}")
-
-# Dataloaders for each set
-train_loader = DataLoader(train_dataset, batch_size = 4, shuffle=True)
-validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
-
-
 class LinearRegression(torch.nn.Module):
     def __init__(self):
         super().__init__() # initalises the parent class
@@ -53,11 +33,43 @@ class LinearRegression(torch.nn.Module):
     def forward(self, features):
         return self.linear_layer(features) # Makes prediction
 
+class LogisticRegression(torch.nn.Module):
+    def __init__(self):
+        super().__init__() # initalises the parent class
+        self.linear_layer = torch.nn.Linear(12,1)
 
+    def forward(self, features):
+        return F.sigmoid(self.linear_layer(features)) # Makes prediction as a probability between 0 and 1
+
+class NN(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        #define layers
+        self.layers = torch.nn.Sequential(
+            torch.nn.Linear(12, 16),
+            torch.nn.ReLU(),
+            torch.nn.Linear(16,1)
+        )
+
+    def forward(self, X):
+        return self.layers(X)
+
+def split_data(dataset):
+    # Splits data into 70% training and 30% test
+    train_dataset, test_dataset = random_split(dataset, [int(len(dataset) * 0.7), len(dataset)-int(len(dataset)*0.7)])
+
+    # Splits test data in half, percentage of total dataset is 15% test and 15% validation
+    validation_dataset, test_dataset = random_split(test_dataset, [int(len(test_dataset) * 0.5), len(test_dataset)-int(len(test_dataset)*0.5)])
+
+    print(f"    Training: {len(train_dataset)}")
+    print(f"    Validation: {len(validation_dataset)}")
+    print(f"    Testing: {len(test_dataset)}")
+
+    return train_dataset, test_dataset, validation_dataset
 
 
 # Function that trains the model
-def train(model, train_loader, epochs=10):
+def train(model, dataloader, epochs=10):
     writer = SummaryWriter()
     optimiser = torch.optim.SGD(model.parameters(),lr = 0.001)
     batch_index = 0
@@ -71,7 +83,7 @@ def train(model, train_loader, epochs=10):
 
             
             prediction = model(features) # Provides prediction through the linear regression model
-            loss = F.mse_loss(prediction, labels)
+            loss = F.mse_loss(prediction, labels) #For linear Regression use F.binary_cross_entropy() instead
             loss = loss.type(torch.float32) # Error for the linear regression
             loss.backward() # Populates the gradients from the parameters of our model
             print(loss.item())
@@ -84,6 +96,15 @@ def train(model, train_loader, epochs=10):
 
 
 
+if __name__ == "__main__":
 
-model = LinearRegression()
-train(model, train_loader)
+    dataset = AirbnbNightlyPriceImageDataset() #Creates an instance of the class
+    train_dataset, test_dataset, validation_dataset = split_data(dataset)
+
+    model = NN()
+    # Dataloaders for each set
+    train_loader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
+    validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
+    train(model, train_loader)
+    train(model, validation_loader)
