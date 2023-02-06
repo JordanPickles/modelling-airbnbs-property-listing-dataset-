@@ -8,6 +8,12 @@ import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from tabular_data import load_airbnb
 import yaml
+import os
+import json
+import time
+from datetime import datetime
+
+
 
 class AirbnbNightlyPriceImageDataset(Dataset):
     def __init__(self):
@@ -53,12 +59,10 @@ class NN(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(self.hidden_layer_width, 1) 
         )
-
-
     def forward(self, X):
         return self.layers(X)
 
-def split_data(dataset):
+def split_data(dataset): #TODO scalar the data
     # Splits data into 70% training and 30% test
     train_dataset, test_dataset = random_split(dataset, [int(len(dataset) * 0.7), len(dataset)-int(len(dataset)*0.7)])
 
@@ -82,6 +86,7 @@ def train(model, dataloader, nn_config, epochs=10):
 
     for epoch in range(epochs): # Loops through the dataset a number of times
         for batch in train_loader: # Samples different batches of the data from the data loader
+            
             features, labels = batch # Sets features and labels from the batch
             features = features.type(torch.float32)
             labels = labels.type(torch.float32)
@@ -99,12 +104,50 @@ def train(model, dataloader, nn_config, epochs=10):
 
             writer.add_scalar('loss', loss.item(), batch_index)
             batch_index += 1
+    
+
+def evaluate_model(model, dataloader, nn_config, epochs=10):
+    start_time = time.time()
+    performance_metrics = {}
+    train(model, dataloader, nn_config, epochs)
+
+    end_time = time.time()
+    model_datetime = datetime.fromtimestamp(datetime.timestamp(datetime.now())).strftime("%d-%m-%Y, %H:%M:%S")
+    
+    rmse = #
+    r_2 = #
+    training_duration = end_time - start_time
+    interference_latency = #average time taken to make a prediction under a key called interference latency
+    
+
+    save_model(model, nn_config, performance_metrics, model_datetime)
+    
+    return performance_metrics, model_datetime
+
+    
 
 def get_nn_config(config_file = 'nn_config.yaml') -> dict:
     with open(config_file, 'r') as f:
         nn_config = yaml.safe_load(f)
     return nn_config
 
+
+def save_model(model, hyperparameters, metrics, model_folder):    
+    # Ensures directories are created
+    if not os.path.exists('./models'):
+        os.makedirs('./models')
+    if not os.path.exists('./models/regression'):
+        os.makedirs('./models/regression')
+    if not os.path.exists('./models/regression/neural_networks'):
+        os.makedirs('./models/regression/neural_networks')
+
+
+    with open(f'./models/regression/neural_networks/{model_folder}/hyperparameters.json', 'w') as f:
+        json.dump(hyperparameters, f)
+    with open(f'./models/regression/neural_networks/{model_folder}/metrics.json', 'w') as f:
+        json.dump(metrics, f)
+    with open(f'./models/regression/neural_networks/{model_folder}/metrics.pt', 'w') as f:
+        torch.save(model.state_dict(), f)
 
 
 if __name__ == "__main__":
@@ -118,6 +161,6 @@ if __name__ == "__main__":
     validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
     
-    train(model, train_loader, get_nn_config())
-    train(model, validation_loader, get_nn_config())
+    evaluate_model(model, train_loader, get_nn_config())
+    evaluate_model(model, validation_loader, get_nn_config())
 
