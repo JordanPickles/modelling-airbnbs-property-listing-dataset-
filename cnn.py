@@ -12,7 +12,8 @@ import os
 import json
 import time
 from datetime import datetime
-
+from sklearn.metrics import mean_squared_error, r2_score
+import math
 
 
 class AirbnbNightlyPriceImageDataset(Dataset):
@@ -107,17 +108,24 @@ def train(model, dataloader, nn_config, epochs=10):
     
 
 def evaluate_model(model, dataloader, nn_config, epochs=10):
-    start_time = time.time()
+    train_start_time = time.time()
     performance_metrics = {}
-    train(model, dataloader, nn_config, epochs)
+    trained_model = train(model, dataloader, nn_config, epochs)
 
-    end_time = time.time()
+    train_end_time = time.time()
     model_datetime = datetime.fromtimestamp(datetime.timestamp(datetime.now())).strftime("%d-%m-%Y, %H:%M:%S")
     
-    rmse = #
-    r_2 = #
-    training_duration = end_time - start_time
-    interference_latency = #average time taken to make a prediction under a key called interference latency
+    features, labels = dataloader
+
+    prediction_start_time = time.time()
+    predictions = trained_model(features)
+    prediction_end_time = time.time()
+
+
+    rmse = sqrt(mean_squared_error(predictions, labels))
+    r_2 = r2_score(predictions, labels)
+    training_duration = train_end_time - train_start_time
+    interference_latency = prediction_end_time - prediction_start_time / len(predictions)
     
 
     save_model(model, nn_config, performance_metrics, model_datetime)
