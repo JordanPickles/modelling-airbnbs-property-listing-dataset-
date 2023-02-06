@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 from torch.utils.tensorboard import SummaryWriter
 from tabular_data import load_airbnb
-
+import yaml
 
 class AirbnbNightlyPriceImageDataset(Dataset):
     def __init__(self):
@@ -42,14 +42,18 @@ class LogisticRegression(torch.nn.Module):
         return F.sigmoid(self.linear_layer(features)) # Makes prediction as a probability between 0 and 1
 
 class NN(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, nn_config):
         super().__init__()
         #define layers
+        self.nn_config = nn_config
+        self.hidden_layer_width = nn_config['hidden_layer_width']
+        self.depth = nn_config['model_depth']
         self.layers = torch.nn.Sequential(
-            torch.nn.Linear(12, 16),
+            torch.nn.Linear(self.hidden_layer_width, self.hidden_layer_width), # uses the same width in all layers of the model
             torch.nn.ReLU(),
-            torch.nn.Linear(16,1)
+            torch.nn.Linear(self.hidden_layer_width, 1) 
         )
+
 
     def forward(self, X):
         return self.layers(X)
@@ -69,9 +73,11 @@ def split_data(dataset):
 
 
 # Function that trains the model
-def train(model, dataloader, epochs=10):
+def train(model, dataloader, nn_config, epochs=10):
     writer = SummaryWriter()
-    optimiser = torch.optim.SGD(model.parameters(),lr = 0.001)
+    if nn_config['optimiser'] == 'SGD':
+        optimiser = torch.optim.SGD
+        optimiser = optimiser(model.parameters(),nn_config['learning_rate'])
     batch_index = 0
 
     for epoch in range(epochs): # Loops through the dataset a number of times
@@ -94,6 +100,11 @@ def train(model, dataloader, epochs=10):
             writer.add_scalar('loss', loss.item(), batch_index)
             batch_index += 1
 
+def get_nn_config(config_file = 'nn_config.yaml') -> dict:
+    with open(config_file, 'r') as f:
+        nn_config = yaml.safe_load(f)
+    return nn_config
+
 
 
 if __name__ == "__main__":
@@ -101,10 +112,12 @@ if __name__ == "__main__":
     dataset = AirbnbNightlyPriceImageDataset() #Creates an instance of the class
     train_dataset, test_dataset, validation_dataset = split_data(dataset)
 
-    model = NN()
+    model = NN(get_nn_config())
     # Dataloaders for each set
     train_loader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
     validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
-    train(model, train_loader)
-    train(model, validation_loader)
+    
+    train(model, train_loader, get_nn_config())
+    train(model, validation_loader, get_nn_config())
+
