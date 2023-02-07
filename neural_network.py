@@ -13,7 +13,7 @@ import json
 import time
 from datetime import datetime
 from sklearn.metrics import mean_squared_error, r2_score
-import math
+from math import sqrt
 
 
 class AirbnbNightlyPriceImageDataset(Dataset):
@@ -31,22 +31,6 @@ class AirbnbNightlyPriceImageDataset(Dataset):
     def __len__(self):
         return len(self.X)
 
-
-class LinearRegression(torch.nn.Module):
-    def __init__(self):
-        super().__init__() # initalises the parent class
-        self.linear_layer = torch.nn.Linear(12,1)
-
-    def forward(self, features):
-        return self.linear_layer(features) # Makes prediction
-
-class LogisticRegression(torch.nn.Module):
-    def __init__(self):
-        super().__init__() # initalises the parent class
-        self.linear_layer = torch.nn.Linear(12,1)
-
-    def forward(self, features):
-        return F.sigmoid(self.linear_layer(features)) # Makes prediction as a probability between 0 and 1
 
 class NN(torch.nn.Module):
     def __init__(self, nn_config):
@@ -74,6 +58,7 @@ def split_data(dataset): #TODO scalar the data
     print(f"    Validation: {len(validation_dataset)}")
     print(f"    Testing: {len(test_dataset)}")
 
+
     return train_dataset, test_dataset, validation_dataset
 
 
@@ -86,17 +71,15 @@ def train(model, dataloader, nn_config, epochs=10):
     batch_index = 0
 
     for epoch in range(epochs): # Loops through the dataset a number of times
-        for batch in train_loader: # Samples different batches of the data from the data loader
+        for batch in dataloader: # Samples different batches of the data from the data loader
             
-            features, labels = batch # Sets features and labels from the batch
-            features = features.type(torch.float32)
-            labels = labels.type(torch.float32)
-            labels = labels.unsqueeze(1) #Adds new dimension to tensor to ensure the labels and predictions are the same shape
-
-            
-            prediction = model(features) # Provides prediction through the linear regression model
-            loss = F.mse_loss(prediction, labels) #For linear Regression use F.binary_cross_entropy() instead
-            loss = loss.type(torch.float32) # Error for the linear regression
+            X, y = batch # Sets features and labels from the batch
+            X = X.type(torch.float32)
+            y = y.type(torch.float32)
+                        
+            prediction = model(X) 
+            loss = F.mse_loss(prediction, y) 
+            loss = loss.type(torch.float32)
             loss.backward() # Populates the gradients from the parameters of our model
             print(loss.item())
 
@@ -105,34 +88,65 @@ def train(model, dataloader, nn_config, epochs=10):
 
             writer.add_scalar('loss', loss.item(), batch_index)
             batch_index += 1
+
     
 
-def evaluate_model(model, dataloader, nn_config, epochs=10):
+def evaluate_model(model, train_dataset, test_dataset, validation_dataset, nn_config, epochs=10):
+    # Train the model
+    dataloader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
     train_start_time = time.time()
-    performance_metrics = {}
     trained_model = train(model, dataloader, nn_config, epochs)
-
     train_end_time = time.time()
+    model_training_duration = train_end_time - train_start_time
     model_datetime = datetime.fromtimestamp(datetime.timestamp(datetime.now())).strftime("%d-%m-%Y, %H:%M:%S")
-    
-    features, labels = dataloader
+        
+    performance_metrics = {}
 
+    #Train Predictions and Metrics
+    X_train = [sample[0] for sample in train_dataset]
+    X_train = torch.tensor(X_train, dtype = torch.float32)
+    y_train = [sample[1] for sample in train_dataset]
+    y_train = torch.tensor(y_train, dtype = torch.float32)
+    print(X_train)
+    print(y_train)
     prediction_start_time = time.time()
-    predictions = trained_model(features)
+    y_train_pred = model(X_train)
     prediction_end_time = time.time()
+    inference_latency = prediction_end_time - prediction_start_time / len(y_train)
+    rmse_train = sqrt(mean_squared_error(y_train, y_train_pred))
+    r2_train = r2_score(mean_squared_error(y_train, y_train_pred))
+    performance_metrics['train_RMSE_loss'] = rmse_train
+    performance_metrics['train_R_squared'] = r2_train
+
+    #Validation Predictions and Metrics
+    X_validation = [sample[0] for sample in validation_dataset]
+    X_validation = torch.tensor(X_validation, dtype = torch.float32)
+    y_validation = [sample[1] for sample in validation_dataset]
+    y_validation = torch.tensor(y_validation, dtype = torch.float32)
+    y_validation_pred = model(X_validation)
+    rmse_validation = sqrt(mean_squared_error(y_validation, y_validation_pred))
+    r2_validation = r2_score(mean_squared_error(y_validation, y_validation_pred)) 
+    performance_metrics['validation_RMSE_loss'] = rmse_validation
+    performance_metrics['validation_R_squared'] = r2_validation   
 
 
-    rmse = sqrt(mean_squared_error(predictions, labels))
-    r_2 = r2_score(predictions, labels)
-    training_duration = train_end_time - train_start_time
-    interference_latency = prediction_end_time - prediction_start_time / len(predictions)
-    
+    #Test Predictions and Metrics
+    X_test = [sample[0] for sample in test_dataset]
+    X_test = torch.tensor(X_test, dtype = torch.float32)
+    y_test = [sample[1] for sample in test_dataset]
+    y_test = torch.tensor(y_test, dtype = torch.float32)
+    y_test_pred = model(X_test)
+    rmse_test = sqrt(mean_squared_error(y_test, y_test_pred))
+    r2_test = r2_score(mean_squared_error(y_test, y_test_pred))
+    performance_metrics['train_RMSE_loss'] = rmse_test
+    performance_metrics['train_R_squared'] = r2_test
+   
+
+    performance_metrics['training_duration'] = model_training_duration
+    performance_metrics['inference_latency'] = inference_latency
 
     save_model(model, nn_config, performance_metrics, model_datetime)
-    
-    return performance_metrics, model_datetime
-
-    
+       
 
 def get_nn_config(config_file = 'nn_config.yaml') -> dict:
     with open(config_file, 'r') as f:
@@ -149,7 +163,6 @@ def save_model(model, hyperparameters, metrics, model_folder):
     if not os.path.exists('./models/regression/neural_networks'):
         os.makedirs('./models/regression/neural_networks')
 
-
     with open(f'./models/regression/neural_networks/{model_folder}/hyperparameters.json', 'w') as f:
         json.dump(hyperparameters, f)
     with open(f'./models/regression/neural_networks/{model_folder}/metrics.json', 'w') as f:
@@ -164,11 +177,10 @@ if __name__ == "__main__":
     train_dataset, test_dataset, validation_dataset = split_data(dataset)
 
     model = NN(get_nn_config())
-    # Dataloaders for each set
-    train_loader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
-    validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
-    
-    evaluate_model(model, train_loader, get_nn_config())
-    evaluate_model(model, validation_loader, get_nn_config())
+    # train(model, DataLoader(train_dataset, batch_size = 16, shuffle=True), get_nn_config())
+    # Dataloader for each set
+
+
+    evaluate_model(model,train_dataset, validation_dataset, test_dataset, get_nn_config())
+
 

@@ -217,7 +217,7 @@ def find_best_model():
     Parameters:
         None
     Outputs:
-        Prints the model name with the lowest F1 Score
+        Prints the model name with the lowest F1 score
     """
     
     models = ['Logistic Regression', 'Decision Tree Classifier', 'Random Forest Classifier', 'Gradient Boosting Classifier']
