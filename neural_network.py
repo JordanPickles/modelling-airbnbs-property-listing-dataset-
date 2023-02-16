@@ -59,7 +59,7 @@ def split_data(dataset): #TODO scalar the data
     print(f"    Testing: {len(test_dataset)}")
 
 
-    return train_dataset, test_dataset, validation_dataset
+    return train_dataset, validation_dataset, test_dataset
 
 
 # Function that trains the model
@@ -81,66 +81,69 @@ def train(model, dataloader, nn_config, epochs=10):
             loss = F.mse_loss(prediction, y) 
             loss = loss.type(torch.float32)
             loss.backward() # Populates the gradients from the parameters of our model
-            print(loss.item())
-
+            
             optimiser.step() #Optimisation step
             optimiser.zero_grad() # Resets the grad to zero as the grads are no longer useful as they were calculated when the model had different parameters
 
             writer.add_scalar('loss', loss.item(), batch_index)
             batch_index += 1
 
-    
+def model_accuracy(model, dataloader, nn_config, epochs=10):
+    for epoch in range(epochs): # Loops through the dataset a number of times
+        for batch in dataloader: # Samples different batches of the data from the data loader
+            
+            X, y = batch # Sets features and labels from the batch
+            X = X.type(torch.float32)
+            y = y.type(torch.float32)
+                        
+            prediction = model(X) 
+            #add different loss measures per requirement, e.g. rmse, r2 etc
+            rmse_loss = F.mse_loss(prediction, y) #TODO work out how to calculate this accurately
+            rmse_loss = loss.type(torch.float32) 
+            #TODO calculate R2
+    return rmse, r2
+            
 
-def evaluate_model(model, train_dataset, test_dataset, validation_dataset, nn_config, epochs=10):
+def evaluate_model(model, train_dataset, validation_dataset, test_dataset, nn_config):
+    
+    train_loader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
+    validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
+
+
+
     # Train the model
-    dataloader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
+
     train_start_time = time.time()
-    trained_model = train(model, dataloader, nn_config, epochs)
+    train(model, train_loader, nn_config())
     train_end_time = time.time()
     model_training_duration = train_end_time - train_start_time
     model_datetime = datetime.fromtimestamp(datetime.timestamp(datetime.now())).strftime("%d-%m-%Y, %H:%M:%S")
         
     performance_metrics = {}
 
-    #Train Predictions and Metrics
-    X_train = [sample[0] for sample in train_dataset]
-    X_train = torch.tensor(X_train, dtype = torch.float32)
-    y_train = [sample[1] for sample in train_dataset]
-    y_train = torch.tensor(y_train, dtype = torch.float32)
-    print(X_train)
-    print(y_train)
     prediction_start_time = time.time()
-    y_train_pred = model(X_train)
     prediction_end_time = time.time()
-    inference_latency = prediction_end_time - prediction_start_time / len(y_train)
-    rmse_train = sqrt(mean_squared_error(y_train, y_train_pred))
-    r2_train = r2_score(mean_squared_error(y_train, y_train_pred))
-    performance_metrics['train_RMSE_loss'] = rmse_train
-    performance_metrics['train_R_squared'] = r2_train
+    inference_latency = prediction_end_time - prediction_start_time / len(y_train) # TODO move the prediction times into the train or accuracy function?
 
-    #Validation Predictions and Metrics
-    X_validation = [sample[0] for sample in validation_dataset]
-    X_validation = torch.tensor(X_validation, dtype = torch.float32)
-    y_validation = [sample[1] for sample in validation_dataset]
-    y_validation = torch.tensor(y_validation, dtype = torch.float32)
-    y_validation_pred = model(X_validation)
-    rmse_validation = sqrt(mean_squared_error(y_validation, y_validation_pred))
-    r2_validation = r2_score(mean_squared_error(y_validation, y_validation_pred)) 
-    performance_metrics['validation_RMSE_loss'] = rmse_validation
-    performance_metrics['validation_R_squared'] = r2_validation   
+    #Evaluating training set  
+    train_rmse_losss, train_r2 = model_accuracy(model, train_loader)
+    performance_metrics['train_RMSE_loss'] = train_rmse_losss
+    performance_metrics['train_R_squared'] = train_r2
+
+    #Evaluating validation set
+    validation_rmse_losss, validation_r2 = model_accuracy(model, test_loader)
+    performance_metrics['validation_RMSE_loss'] = validation_rmse_losss
+    performance_metrics['validation_R_squared'] = validation_r2  
 
 
-    #Test Predictions and Metrics
-    X_test = [sample[0] for sample in test_dataset]
-    X_test = torch.tensor(X_test, dtype = torch.float32)
-    y_test = [sample[1] for sample in test_dataset]
-    y_test = torch.tensor(y_test, dtype = torch.float32)
-    y_test_pred = model(X_test)
-    rmse_test = sqrt(mean_squared_error(y_test, y_test_pred))
-    r2_test = r2_score(mean_squared_error(y_test, y_test_pred))
-    performance_metrics['train_RMSE_loss'] = rmse_test
-    performance_metrics['train_R_squared'] = r2_test
+    #Evaluating test set
+    test_rmse_losss, test_r2 = model_accuracy(model, validation_loader)
+    performance_metrics['test_RMSE_loss'] = test_rmse_losss
+    performance_metrics['test_R_squared'] = test_r2
    
+
+
 
     performance_metrics['training_duration'] = model_training_duration
     performance_metrics['inference_latency'] = inference_latency
@@ -174,13 +177,24 @@ def save_model(model, hyperparameters, metrics, model_folder):
 if __name__ == "__main__":
 
     dataset = AirbnbNightlyPriceImageDataset() #Creates an instance of the class
-    train_dataset, test_dataset, validation_dataset = split_data(dataset)
+    train_dataset, validation_dataset, test_dataset = split_data(dataset)
 
     model = NN(get_nn_config())
-    # train(model, DataLoader(train_dataset, batch_size = 16, shuffle=True), get_nn_config())
-    # Dataloader for each set
+
+    evaluate_model(train_dataset, validation_dataset, test_dataset, get_nn_config())
 
 
-    evaluate_model(model,train_dataset, validation_dataset, test_dataset, get_nn_config())
+    # TODO: check metrics to be tests = RMSE_loss, R2, training duration (can it be done in the train func?), inference latency (in evaluate of train?ß)
+    # watch last video for saving and loading model (possibly train model, save the state dict and then reload it to test?)
+    # should data be batched when evaluating ?
+    # configure code to run efficiently, should be able to take in several different data types so make it flexible for data entry, can calling all the functions to run the model be made a function such as the evaluate model func?
+    
+
+
+
+    
+
+
+   
 
 
