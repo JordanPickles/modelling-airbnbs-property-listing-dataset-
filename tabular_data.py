@@ -49,7 +49,7 @@ def load_airbnb(df, label: str) -> tuple:
     df.drop(df.columns[0], axis =1)
     labels = df[label]
     features = df.drop(columns = [label], axis = 1)
-    features = features.select_dtypes(include=['int64', 'float64']).values  
+    features = features.select_dtypes(include=['int64', 'float64']).values 
 
     return features, labels
 

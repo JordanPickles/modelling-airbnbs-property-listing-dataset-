@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn.functional as F
 
+
 from torch.utils.tensorboard import SummaryWriter
 
 import itertools
@@ -13,6 +14,7 @@ from itertools import product
 from tabular_data import load_airbnb
 import yaml
 import os
+import shutil
 import json
 import time
 from datetime import datetime
@@ -26,6 +28,8 @@ class AirbnbNightlyPriceImageDataset(Dataset):
         self.data = pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
         self.X, self.y = load_airbnb(self.data, 'Price_Night')
         assert len(self.X) == len(self.y) # Data and labels have to be of equal length
+
+        self.y = self.y.view(-1,1)
         print(self.X.shape)
         print(self.y.shape)
 
@@ -66,77 +70,122 @@ def split_data(dataset): #TODO scalar the data
     return train_dataset, validation_dataset, test_dataset
 
 
-# Function that trains the model
-def train_model(model, train_loader, validation_loader, nn_config, epochs=10):
+def train_model(train_loader, validation_loader, nn_config, epochs=10):
+    model = NN(nn_config)
     writer = SummaryWriter()
     if nn_config['optimiser'] == 'SGD':
         optimiser = torch.optim.SGD
-        optimiser = optimiser(model.parameters(),nn_config['learning_rate'])
+        optimiser = optimiser(model.parameters(), nn_config['learning_rate'])
+    if nn_config['optimiser'] == 'Adam':
+        optimiser = torch.optim.Adam
+        optimiser = optimiser(model.parameters(), nn_config['learning_rate'] )
     batch_index = 0
-
-    min_validation_loss = np.inf
+    train_rmse_loss = 0.0
+    validation_rmse_loss = 0.0
+    train_r2 = 0.0
+    validation_r2 = 0.0
 
     train_start_time = time.time()
     for epoch in range(epochs): # Loops through the dataset a number of times
-        
-        train_loss = 0.0
-        validation_loss = 0.0
-        
+
         for batch in train_loader: # Samples different batches of the data from the data loader
             
-            X, y = batch # Sets features and labels from the batch
-            X = X.type(torch.float32)
-            y = y.type(torch.float32)
+            X_train, y_train = batch # Sets features and labels from the batch
+            X_train = X_train.type(torch.float32)
+            y_train = y_train.type(torch.float32)
+            y_train = y_train.view(-1, 1)
                         
-            train_prediction = model(X) 
-            loss = F.mse_loss(train_prediction, y) 
-            loss = loss.type(torch.float32)
-            loss.backward() # Populates the gradients from the parameters of our model
+            train_prediction = model(X_train) 
+            mse_loss = F.mse_loss(train_prediction, y_train) 
+            mse_loss = mse_loss.type(torch.float32)
+            mse_loss.backward() # Populates the gradients from the parameters of our model
             
             optimiser.step() #Optimisation step
             optimiser.zero_grad() # Resets the grad to zero as the grads are no longer useful as they were calculated when the model had different parameters
 
-            writer.add_scalar('loss', loss.item(), batch_index)
+            writer.add_scalar('loss', mse_loss.item(), batch_index)
             batch_index += 1
+            rmse_loss = torch.sqrt(mse_loss)
+            train_rmse_loss += rmse_loss.item()            
 
-            train_loss += loss.item()
+            train_prediction_detached = train_prediction.detach().numpy()
+            y_train_detached = y_train.detach().numpy()
+            train_r2 += r2_score(y_train_detached, train_prediction_detached)
+
 
 
         for batch in validation_loader: # Samples different batches of the data from the data loader
             
-            X, y = batch # Sets features and labels from the batch
-            X = X.type(torch.float32)
-            y = y.type(torch.float32)
+            X_validation, y_validation = batch # Sets features and labels from the batch
+            X_validation = X_validation.type(torch.float32)
+            y_validation = y_validation.type(torch.float32)
+            y_validation = y_validation.view(-1, 1)
                         
-            validation_prediction = model(X) 
-            #add different loss measures per requirement, e.g. rmse, r2 etc
-            loss = F.mse_loss(validation_prediction, y) #TODO work out how to calculate this accurately
-            loss = loss.type(torch.float32) 
+            validation_prediction = model(X_validation) 
+            mse_loss = F.mse_loss(validation_prediction, y_validation) 
+            mse_loss = mse_loss.type(torch.float32) 
+            rmse_loss = torch.sqrt(mse_loss)
+            validation_rmse_loss += rmse_loss.item()
 
-            validation_loss += loss
+            #Calculate r2
+            validation_prediction_detached = validation_prediction.detach().numpy()
+            y_validation_detached = y_validation.detach().numpy()
+            validation_r2 += r2_score(y_validation_detached, validation_prediction_detached)
 
-    return train_loss, validation_loss
+
+    #Normalises performance metrics to the number of samples passed through the model
+    train_rmse_loss = train_rmse_loss/(epochs*len(X_train))
+    validation_rmse_loss = validation_rmse_loss/(epochs*len(X_train))
+    train_r2 = train_r2 / (epochs*len(X_train))
+    validation_r2 = validation_r2 / (epochs*len(X_train))
+
+    model_name = datetime.fromtimestamp(datetime.timestamp(datetime.now())).strftime("%d-%m-%Y, %H:%M:%S")
+
+    if not os.path.exists('./models/regression/neural_networks/trained_models'):
+        os.makedirs('./models/regression/neural_networks/trained_models')
+    model_path = f'./models/regression/neural_networks/trained_models/{model_name}'
+    torch.save(model.state_dict(), model_path)
+
+    return train_rmse_loss, validation_rmse_loss, train_r2, validation_r2, model_name
 
 
-def test_model(model, dataloader, epochs=10):
-    test_loss = 0.0
+def test_model(nn_config, state_dict_path, dataloader):
+    model = NN(nn_config)
+    test_rmse_loss = 0.0
+    test_r2 = 0.0
+    
+    state_dict = torch.load(state_dict_path)
+    model.load_state_dict(state_dict)
+
     for batch in dataloader: # Samples different batches of the data from the data loader
         
-        X, y = batch # Sets features and labels from the batch
-        X = X.type(torch.float32)
-        y = y.type(torch.float32)
+        X_test, y_test = batch # Sets features and labels from the batch
+        X_test = X_test.type(torch.float32)
+        y_test = y_test.type(torch.float32)
+        y_test = y_test.view(-1, 1)
        
-        prediction_start_time = time.time()
-        prediction = model(X) 
-        prediction_end_time = time.time()
-        inference_latency = prediction_end_time - prediction_start_time / len() # TODO move the prediction times into the train or accuracy function?            
-        
-        #add different loss measures per requirement, e.g. rmse, r2 etc
-        loss = F.mse_loss(prediction, y) #TODO work out how to calculate this accurately
-        loss = loss.type(torch.float32) 
-        test_loss += loss
 
-    return test_loss, inference_latency
+        prediction_start_time = time.time()
+        test_prediction = model(X_test) 
+        inference_latency = (time.time() - prediction_start_time) / len(test_prediction)    
+     
+        #Calculate MSE Loss
+        mse_loss = F.mse_loss(test_prediction, y_test)
+        mse_loss = mse_loss.type(torch.float32) 
+
+        #Calculate RMSE loss
+        rmse_loss = torch.sqrt(mse_loss)
+        test_rmse_loss += rmse_loss.item()
+
+        #Calculate r2
+        prediction_detached = test_prediction.detach().numpy()
+        y_test_detached = y_test.detach().numpy()
+        test_r2 += r2_score(y_test_detached, prediction_detached)
+    
+    test_rmse_loss = test_rmse_loss/(len(X_test))
+    test_r2 = test_r2 / len(X_test)
+
+    return test_rmse_loss, inference_latency, test_r2
            
 
 def get_nn_config(config_file = 'nn_config.yaml') -> dict:
@@ -147,8 +196,8 @@ def get_nn_config(config_file = 'nn_config.yaml') -> dict:
 def generate_nn_configs():
     hyperparameters = {
         'optimiser': ['SGD', 'Adam'],
-        'learning_rate': [0.001, 0.01, ],
-        'hidden_layer_width': [10, 12],
+        'learning_rate': [0.0001, 0.001, 0.01],
+        'hidden_layer_width': [12],
         'model_depth': [3, 4] 
     }
     keys = hyperparameters.keys()
@@ -157,66 +206,72 @@ def generate_nn_configs():
     
     return hyperparameter_combinations
 
-def find_best_nn(model, hyperparameters, train_dataset, validation_dataset, test_dataset):
+def find_best_nn(hyperparameters, train_dataset, validation_dataset, test_dataset):
     nn_configs_dict = generate_nn_configs()
     
     train_loader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
     validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
 
-    for hyperparameters in nn_configs_dict:
+    best_rmse_loss = np.inf
+    best_model_name = None
+    best_model_path = None
+    best_hyperparameters = None
+    performance_metrics = {}
+
+
+    for nn_config in nn_configs_dict:
+        
         train_start_time = time.time()
-        train_rmse_loss, validation_rmse_loss = train_model(model) #add parameters
-        train_end_time = time.time()
-        model_training_duration = train_end_time - train_start_time
+        train_rmse_loss, validation_rmse_loss, train_r2, validation_r2, model_name = train_model(train_loader, validation_loader, nn_config) 
+        model_training_duration = time.time() - train_start_time
+      
+        # Logic applied to decide if model trained is better than the previous best model, if so the best parameters are updated
+        if validation_rmse_loss < best_rmse_loss:
+            best_rmse_loss = validation_rmse_loss
+            best_model_name = model_name
+            best_model_path = f'./models/regression/neural_networks/trained_models/{best_model_name}'
+            best_hyperparameters = nn_config
+            best_model_metrics = performance_metrics
+            test_rmse_loss, inference_latency, test_r2 = test_model(best_hyperparameters, best_model_path, test_loader) 
+            #Adds perfromance metrics to dict
+            performance_metrics['train_RMSE_loss'] = train_rmse_loss
+            performance_metrics['train_R_squared'] = train_r2
+            performance_metrics['validation_RMSE_loss'] = validation_rmse_loss
+            performance_metrics['validation_R_squared'] = validation_r2 
+            performance_metrics['test_RMSE_loss'] = test_rmse_loss
+            performance_metrics['test_R_squared'] = test_r2
+            performance_metrics['training_duration'] = model_training_duration
+            performance_metrics['inference_latency'] = inference_latency
+    
+            
+    return best_model_name, best_model_path, best_hyperparameters, best_model_metrics
 
-        test_rmse_loss, inference_latency = test_model() #add parameters, does the state dict need adding back in ?
 
-        performance_metrics = {}
-        performance_metrics['train_RMSE_loss'] = train_rmse_loss
-        performance_metrics['train_R_squared'] = train_r2
-        performance_metrics['validation_RMSE_loss'] = validation_rmse_loss
-        performance_metrics['validation_R_squared'] = validation_r2 
-        performance_metrics['test_RMSE_loss'] = test_rmse_loss
-        performance_metrics['test_R_squared'] = test_r2
-        performance_metrics['training_duration'] = model_training_duration
-        performance_metrics['inference_latency'] = inference_latency
+def save_model(model_name, model_path, hyperparameters, metrics):
 
-        save_model(model, hyperparameters, performance_metrics)
+    # Creates a folder for the best model trained and then moves model state dict into a folder specifically for that model   
+    new_model_folder = os.makedirs(f'./models/regression/neural_networks/{model_name}')
+    new_model_path = f'./models/regression/neural_networks/{model_name}/model.pt'
+    shutil.move(model_path, new_model_path)
 
 
-    #Define a function called find_best_nn which calls this function and then sequentially trains models with each config. 
-    # It should save the config used in the hyperparameters.json file for each model trained. Return the model, metrics, and hyperparameters. 
-    # Save the best model in a folder
-
-def save_model(model, hyperparameters, metrics):   
-    model_folder = datetime.fromtimestamp(datetime.timestamp(datetime.now())).strftime("%d-%m-%Y, %H:%M:%S")
-    if not os.path.exists('./models/regression/neural_networks'):
-        os.makedirs('./models/regression/neural_networks')
-
-    os.makedirs(f'./models/regression/neural_networks/{model_folder}')
-    model_path = f'./models/regression/neural_networks/{model_folder}/model.pt'
-    torch.save(model.state_dict, model_path)
-
-    with open(f'./models/regression/neural_networks/{model_folder}/hyperparameters.json', 'w') as f:
+    #Saves hyperparameters and model performance metrics
+    with open(f'./models/regression/neural_networks/{model_name}/hyperparameters.json', 'w') as f:
         json.dump(hyperparameters, f)
-    with open(f'./models/regression/neural_networks/{model_folder}/metrics.json', 'w') as f:
+    with open(f'./models/regression/neural_networks/{model_name}/metrics.json', 'w') as f:
         json.dump(metrics, f)
-    with open(f'./models/regression/neural_networks/{model_folder}/model.pt', 'w') as f:
-        torch.save(model.state_dict(), f)
+
 
 
 if __name__ == "__main__":
     dataset = AirbnbNightlyPriceImageDataset() #Creates an instance of the class
     train_dataset, validation_dataset, test_dataset = split_data(dataset)
-    model = NN(get_nn_config())
-
-    find_best_nn(model, generate_nn_configs(), train_dataset, validation_dataset, test_dataset)
-
+    best_model_name, best_model_path, best_hyperparameters, performance_metrics  = find_best_nn(generate_nn_configs(),train_dataset, validation_dataset, test_dataset)
+    save_model(best_model_name, best_model_path, best_hyperparameters, performance_metrics)
 
 
-    # TODO: check metrics to be tests = RMSE_loss, R2, training duration (can it be done in the train func?), inference latency (in evaluate of train?ß)
-    # configure code to run efficiently, should be able to take in several different data types so make it flexible for data entry, can calling all the functions to run the model be made a function such as the evaluate model func?
+    #TODO: scale the data in split data?
     
 
 
