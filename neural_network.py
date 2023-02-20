@@ -4,9 +4,10 @@ import numpy as np
 import torch 
 from torch.utils.data import Dataset, DataLoader, random_split
 import torch.nn.functional as F
-
-
 from torch.utils.tensorboard import SummaryWriter
+
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.preprocessing import MinMaxScaler
 
 import itertools
 from itertools import product
@@ -18,20 +19,16 @@ import shutil
 import json
 import time
 from datetime import datetime
-from sklearn.metrics import mean_squared_error, r2_score
+
 from math import sqrt
 
 
 class AirbnbNightlyPriceImageDataset(Dataset):
-    def __init__(self):
+    def __init__(self, data):
         super().__init__() 
         self.data = pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
         self.X, self.y = load_airbnb(self.data, 'Price_Night')
         assert len(self.X) == len(self.y) # Data and labels have to be of equal length
-
-        self.y = self.y.view(-1,1)
-        print(self.X.shape)
-        print(self.y.shape)
 
     def __getitem__(self, index):
         return (torch.tensor(self.X[index]), torch.tensor(self.y[index]))
@@ -56,6 +53,16 @@ class NN(torch.nn.Module):
         return self.layers(X)
 
 def split_data(dataset): #TODO scalar the data
+    """Splits the input dataset into training, validation, and testing sets.
+
+    Parameters:
+        - dataset: a PyTorch Dataset object that contains the input data.
+
+    Returns:
+        - train_dataset: a PyTorch Dataset object containing 70% of the input data, to be used for training.
+        - validation_dataset: a PyTorch Dataset object containing 15% of the input data, to be used for validation.
+        - test_dataset: a PyTorch Dataset object containing 15% of the input data, to be used for testing."""
+
     # Splits data into 70% training and 30% test
     train_dataset, test_dataset = random_split(dataset, [int(len(dataset) * 0.7), len(dataset)-int(len(dataset)*0.7)])
 
@@ -71,8 +78,24 @@ def split_data(dataset): #TODO scalar the data
 
 
 def train_model(train_loader, validation_loader, nn_config, epochs=10):
+    """Trains a neural network model on the provided training data and evaluates its performance on the validation data.
+
+    Parameters:
+        - train_loader: a PyTorch DataLoader object that loads the training data in batches.
+        - validation_loader: a PyTorch DataLoader object that loads the validation data in batches.
+        - nn_config: a dictionary containing the configuration for the neural network, including the number of input and output features, the number of hidden layers and their sizes, the activation function to be used, and the type of optimizer and learning rate.
+        - epochs: an integer indicating the number of times to loop through the entire dataset during training (default: 10).
+
+    Returns:
+        - train_rmse_loss: a float representing the root mean squared error (RMSE) of the model's predictions on the training data.
+        - validation_rmse_loss: a float representing the RMSE of the model's predictions on the validation data.
+        - train_r2: a float representing the R-squared score of the model's predictions on the training data.
+        - validation_r2: a float representing the R-squared score of the model's predictions on the validation data.
+        - model_name: a string representing the name of the trained model file."""
+    
     model = NN(nn_config)
     writer = SummaryWriter()
+    scaler = MinMaxScaler()
     if nn_config['optimiser'] == 'SGD':
         optimiser = torch.optim.SGD
         optimiser = optimiser(model.parameters(), nn_config['learning_rate'])
@@ -94,11 +117,12 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
             X_train = X_train.type(torch.float32)
             y_train = y_train.type(torch.float32)
             y_train = y_train.view(-1, 1)
+
                         
             train_prediction = model(X_train) 
             mse_loss = F.mse_loss(train_prediction, y_train) 
             mse_loss = mse_loss.type(torch.float32)
-            mse_loss.backward() # Populates the gradients from the parameters of our model
+            mse_loss.backward() # Populates the gradients from the parameters of the smodel
             
             optimiser.step() #Optimisation step
             optimiser.zero_grad() # Resets the grad to zero as the grads are no longer useful as they were calculated when the model had different parameters
@@ -150,6 +174,20 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
 
 
 def test_model(nn_config, state_dict_path, dataloader):
+    """
+    This function tests the trained neural network model using the test dataset and calculates its RMSE loss and R2 score.
+
+    Parameters:
+        - nn_config: a dictionary containing the configuration of the neural network
+        - state_dict_path: the file path of the state dictionary for the trained model
+        - dataloader: a PyTorch dataloader object that loads the test data
+    
+    Returns:
+        - test_rmse_loss: the root mean squared error loss of the model on the test data
+        - inference_latency: the time taken to make a single prediction
+        - test_r2: the R2 score of the model on the test data
+    """
+    
     model = NN(nn_config)
     test_rmse_loss = 0.0
     test_r2 = 0.0
@@ -189,11 +227,30 @@ def test_model(nn_config, state_dict_path, dataloader):
            
 
 def get_nn_config(config_file = 'nn_config.yaml') -> dict:
+    """Loads neural network configuration from a YAML file and returns as a dictionary
+    
+    Parameters:
+        config_file: path to the .yaml file containing the hyperparameters
+        
+    Outputs:
+        nn_config: dict containing the hyperparameters for the model"""
+    
     with open(config_file, 'r') as f:
         nn_config = yaml.safe_load(f)
     return nn_config
 
 def generate_nn_configs():
+    """Generates a list of dictionaries, where each dictionary represents a set of hyperparameters to be used in a neural network model.
+
+    Parameters: None
+
+    Returns: A list of dictionaries. Each dictionary contains the following keys:
+        - 'optimiser': a string indicating the optimiser to be used in the neural network (either 'SGD' or 'Adam').
+        - 'learning_rate': a float indicating the learning rate to be used in the neural network.
+        - 'hidden_layer_width': an integer indicating the number of neurons in the hidden layers of the neural network.
+        - 'model_depth': an integer indicating the number of hidden layers in the neural network.
+        The list contains all possible combinations of these hyperparameters."""
+    
     hyperparameters = {
         'optimiser': ['SGD', 'Adam'],
         'learning_rate': [0.0001, 0.001, 0.01],
@@ -207,6 +264,22 @@ def generate_nn_configs():
     return hyperparameter_combinations
 
 def find_best_nn(hyperparameters, train_dataset, validation_dataset, test_dataset):
+    """Trains and tests neural networks on different hyperparameters, returning the best performing model.
+    
+    Inputs:
+        - hyperparameters: a dictionary with hyperparameters to train neural networks on
+        - train_dataset: PyTorch Dataset object of training data
+        - validation_dataset: PyTorch Dataset object of validation data
+        - test_dataset: PyTorch Dataset object of test data
+    
+    Returns:
+        A tuple containing:
+            - best_model_name: the name of the best performing trained model
+            - best_model_path: the path to the best performing trained model
+            - best_hyperparameters: the hyperparameters of the best performing trained model
+            - best_model_metrics: a dictionary of the best model's performance metrics on the train, validation, and test datasets
+    """
+
     nn_configs_dict = generate_nn_configs()
     
     train_loader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
@@ -248,30 +321,43 @@ def find_best_nn(hyperparameters, train_dataset, validation_dataset, test_datase
     return best_model_name, best_model_path, best_hyperparameters, best_model_metrics
 
 
-def save_model(model_name, model_path, hyperparameters, metrics):
+def save_model(model_name, model_path, hyperparameters, metrics, prediction_variable):
+    """Save the trained neural network model with the specified model name, hyperparameters and performance metrics for the prediction variable.
 
+Parameters:
+    - model_name (str): Name of the best trained model.
+    - model_path (str): Path of the saved model state dictionary.
+    - hyperparameters (dict): Hyperparameters used to train the model.
+    - metrics (dict): Performance metrics of the trained model.
+    - prediction_variable (str): The name of the variable that the model is predicting.
+
+Returns:
+    None """
     # Creates a folder for the best model trained and then moves model state dict into a folder specifically for that model   
-    new_model_folder = os.makedirs(f'./models/regression/neural_networks/{model_name}')
-    new_model_path = f'./models/regression/neural_networks/{model_name}/model.pt'
+    new_model_folder = os.makedirs(f'./models/regression/neural_networks/{prediction_variable}/{model_name}')
+    new_model_path = f'./models/regression/neural_networks/{prediction_variable}/{model_name}/model.pt'
     shutil.move(model_path, new_model_path)
 
 
     #Saves hyperparameters and model performance metrics
-    with open(f'./models/regression/neural_networks/{model_name}/hyperparameters.json', 'w') as f:
+    with open(f'./models/regression/neural_networks/{prediction_variable}/{model_name}/hyperparameters.json', 'w') as f:
         json.dump(hyperparameters, f)
-    with open(f'./models/regression/neural_networks/{model_name}/metrics.json', 'w') as f:
+    with open(f'./models/regression/neural_networks/{prediction_variable}/{model_name}/metrics.json', 'w') as f:
         json.dump(metrics, f)
 
 
 
 if __name__ == "__main__":
-    dataset = AirbnbNightlyPriceImageDataset() #Creates an instance of the class
+    prediction_variable = 'Price_Night'
+    data_file = pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
+    dataset = AirbnbNightlyPriceImageDataset(load_airbnb(data_file, prediction_variable )) #Creates an instance of the class
     train_dataset, validation_dataset, test_dataset = split_data(dataset)
     best_model_name, best_model_path, best_hyperparameters, performance_metrics  = find_best_nn(generate_nn_configs(),train_dataset, validation_dataset, test_dataset)
-    save_model(best_model_name, best_model_path, best_hyperparameters, performance_metrics)
+    save_model(best_model_name, best_model_path, best_hyperparameters, performance_metrics, prediction_variable)
 
 
-    #TODO: scale the data in split data?
+
+
     
 
 
