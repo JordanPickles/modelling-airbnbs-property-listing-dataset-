@@ -44,11 +44,15 @@ class NN(torch.nn.Module):
         self.nn_config = nn_config
         self.hidden_layer_width = nn_config['hidden_layer_width']
         self.depth = nn_config['model_depth']
+
+
         self.layers = torch.nn.Sequential(
-            torch.nn.Linear(self.hidden_layer_width, self.hidden_layer_width), # uses the same width in all layers of the model
+            torch.nn.Linear(12, self.hidden_layer_width), # uses the same width in all layers of the model
             torch.nn.ReLU(),
             torch.nn.Linear(self.hidden_layer_width, 1) 
         )
+
+        
     def forward(self, X):
         return self.layers(X)
 
@@ -108,7 +112,6 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
     train_r2 = 0.0
     validation_r2 = 0.0
 
-    train_start_time = time.time()
     for epoch in range(epochs): # Loops through the dataset a number of times
 
         for batch in train_loader: # Samples different batches of the data from the data loader
@@ -127,7 +130,7 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
             optimiser.step() #Optimisation step
             optimiser.zero_grad() # Resets the grad to zero as the grads are no longer useful as they were calculated when the model had different parameters
 
-            writer.add_scalar('loss', mse_loss.item(), batch_index)
+            writer.add_scalar('training_loss', mse_loss.item(), batch_index)
             batch_index += 1
             rmse_loss = torch.sqrt(mse_loss)
             train_rmse_loss += rmse_loss.item()            
@@ -147,7 +150,8 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
                         
             validation_prediction = model(X_validation) 
             mse_loss = F.mse_loss(validation_prediction, y_validation) 
-            mse_loss = mse_loss.type(torch.float32) 
+            mse_loss = mse_loss.type(torch.float32)
+            writer.add_scalar('validation_loss', mse_loss.item(), batch_index) 
             rmse_loss = torch.sqrt(mse_loss)
             validation_rmse_loss += rmse_loss.item()
 
@@ -158,10 +162,10 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
 
 
     #Normalises performance metrics to the number of samples passed through the model
-    train_rmse_loss = train_rmse_loss/(epochs*len(X_train))
-    validation_rmse_loss = validation_rmse_loss/(epochs*len(X_train))
-    train_r2 = train_r2 / (epochs*len(X_train))
-    validation_r2 = validation_r2 / (epochs*len(X_train))
+    train_rmse_loss = train_rmse_loss/(epochs*len(train_loader))
+    validation_rmse_loss = validation_rmse_loss/(epochs*len(validation_loader))
+    train_r2 = train_r2 / (epochs*len(train_loader))
+    validation_r2 = validation_r2 / (epochs*len(validation_loader))
 
     model_name = datetime.fromtimestamp(datetime.timestamp(datetime.now())).strftime("%d-%m-%Y, %H:%M:%S")
 
@@ -189,6 +193,9 @@ def test_model(nn_config, state_dict_path, dataloader):
     """
     
     model = NN(nn_config)
+    writer = SummaryWriter()
+
+    batch_index = 0
     test_rmse_loss = 0.0
     test_r2 = 0.0
     
@@ -210,6 +217,7 @@ def test_model(nn_config, state_dict_path, dataloader):
         #Calculate MSE Loss
         mse_loss = F.mse_loss(test_prediction, y_test)
         mse_loss = mse_loss.type(torch.float32) 
+        writer.add_scalar('test_loss', mse_loss.item(), batch_index)
 
         #Calculate RMSE loss
         rmse_loss = torch.sqrt(mse_loss)
@@ -219,9 +227,11 @@ def test_model(nn_config, state_dict_path, dataloader):
         prediction_detached = test_prediction.detach().numpy()
         y_test_detached = y_test.detach().numpy()
         test_r2 += r2_score(y_test_detached, prediction_detached)
+
+        batch_index += 1
     
-    test_rmse_loss = test_rmse_loss/(len(X_test))
-    test_r2 = test_r2 / len(X_test)
+    test_rmse_loss = test_rmse_loss/(len(dataloader))
+    test_r2 = test_r2 / len(dataloader)
 
     return test_rmse_loss, inference_latency, test_r2
            
@@ -254,8 +264,8 @@ def generate_nn_configs():
     hyperparameters = {
         'optimiser': ['SGD', 'Adam'],
         'learning_rate': [0.0001, 0.001, 0.01],
-        'hidden_layer_width': [12],
-        'model_depth': [3, 4] 
+        'hidden_layer_width': [10, 12],
+        'model_depth': [3, 4,5] 
     }
     keys = hyperparameters.keys()
     values = hyperparameters.values()
