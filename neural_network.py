@@ -24,10 +24,10 @@ from math import sqrt
 
 
 class AirbnbNightlyPriceImageDataset(Dataset):
-    def __init__(self, data):
+    def __init__(self, data, prediction_variable):
         super().__init__() 
-        self.data = pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
-        self.X, self.y = load_airbnb(self.data, 'Price_Night')
+        self.data = data.drop(data.columns[data.columns.str.contains('unnamed', case = False)], axis = 1)
+        self.X, self.y = load_airbnb(self.data, prediction_variable)
         assert len(self.X) == len(self.y) # Data and labels have to be of equal length
 
     def __getitem__(self, index):
@@ -41,15 +41,18 @@ class NN(torch.nn.Module):
     def __init__(self, nn_config):
         super().__init__()
         #define layers
-        self.nn_config = nn_config
         self.hidden_layer_width = nn_config['hidden_layer_width']
-        self.depth = nn_config['model_depth']
-
-
+        self.dropout = nn_config['dropout']
+        
         self.layers = torch.nn.Sequential(
-            torch.nn.Linear(12, self.hidden_layer_width), # uses the same width in all layers of the model
+            torch.nn.Linear(11, self.hidden_layer_width), # uses the same width in all layers of the model
+            torch.nn.ReLU(),       
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Linear(self.hidden_layer_width, self.hidden_layer_width),
             torch.nn.ReLU(),
-            torch.nn.Linear(self.hidden_layer_width, 1) 
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Linear(self.hidden_layer_width, 1)
+
         )
 
         
@@ -117,6 +120,7 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
         for batch in train_loader: # Samples different batches of the data from the data loader
             
             X_train, y_train = batch # Sets features and labels from the batch
+
             X_train = X_train.type(torch.float32)
             y_train = y_train.type(torch.float32)
             y_train = y_train.view(-1, 1)
@@ -145,6 +149,7 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
             
             X_validation, y_validation = batch # Sets features and labels from the batch
             X_validation = X_validation.type(torch.float32)
+            # X_validation_scaled = torch.tensor(scaler.fit_transform(X_validation))
             y_validation = y_validation.type(torch.float32)
             y_validation = y_validation.view(-1, 1)
                         
@@ -194,6 +199,7 @@ def test_model(nn_config, state_dict_path, dataloader):
     
     model = NN(nn_config)
     writer = SummaryWriter()
+    scaler = MinMaxScaler()
 
     batch_index = 0
     test_rmse_loss = 0.0
@@ -206,6 +212,7 @@ def test_model(nn_config, state_dict_path, dataloader):
         
         X_test, y_test = batch # Sets features and labels from the batch
         X_test = X_test.type(torch.float32)
+        # X_test_scaled = torch.tensor(scaler.fit_transform(X_test))
         y_test = y_test.type(torch.float32)
         y_test = y_test.view(-1, 1)
        
@@ -263,9 +270,9 @@ def generate_nn_configs():
     
     hyperparameters = {
         'optimiser': ['SGD', 'Adam'],
-        'learning_rate': [0.0001, 0.001, 0.01],
-        'hidden_layer_width': [10, 12],
-        'model_depth': [3, 4,5] 
+        'learning_rate': [0.0001, 0.001],
+        'hidden_layer_width': [10, 12, 14],
+        'dropout': [0.2, 0.3] 
     }
     keys = hyperparameters.keys()
     values = hyperparameters.values()
@@ -292,9 +299,9 @@ def find_best_nn(hyperparameters, train_dataset, validation_dataset, test_datase
 
     nn_configs_dict = generate_nn_configs()
     
-    train_loader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
-    validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size = 32, shuffle=True)
+    validation_loader = DataLoader(validation_dataset, batch_size = 32, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size = 32, shuffle=True)
 
     best_rmse_loss = np.inf
     best_model_name = None
@@ -359,9 +366,13 @@ Returns:
 
 if __name__ == "__main__":
     prediction_variable = 'Price_Night'
-    data_file = pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
-    dataset = AirbnbNightlyPriceImageDataset(load_airbnb(data_file, prediction_variable )) #Creates an instance of the class
+
+    df = pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
+
+
+    dataset = AirbnbNightlyPriceImageDataset(df, prediction_variable) #Creates an instance of the class
     train_dataset, validation_dataset, test_dataset = split_data(dataset)
+
     best_model_name, best_model_path, best_hyperparameters, performance_metrics  = find_best_nn(generate_nn_configs(),train_dataset, validation_dataset, test_dataset)
     save_model(best_model_name, best_model_path, best_hyperparameters, performance_metrics, prediction_variable)
 

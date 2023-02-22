@@ -264,7 +264,7 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
     np.random.seed(2)
 
     # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
-    for key, values in models_dict.items(): #TODO - should a random seed be included here?
+    for key, values in models_dict.items(): 
         model, hyperparameters = values
         best_model, best_hyperparameters, performance_metrics = tune_regression_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
         folder_path = f'./models/regression/linear_regression/{key}'

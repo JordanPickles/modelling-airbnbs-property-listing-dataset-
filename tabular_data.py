@@ -3,8 +3,8 @@ import pandas as pd
 def remove_rows_with_missing_ratings(df):
     """This function drops all rows with null values included from the rating columns and drops any unnamed columns
     Output: df with rows with null values in rating columns removed and unnamed column removed"""
+    print(df.columns)
     df = df.dropna(subset = ["Cleanliness_rating", "Accuracy_rating", "Communication_rating", "Location_rating", "Check-in_rating", "Value_rating"])
-    df.loc[:, df.columns.str.contains('unnamed', case=False)]
     df= df.drop(df.columns[df.columns.str.contains('unnamed', case = False)], axis = 1)
     return df
 
@@ -41,15 +41,16 @@ def clean_tabular_data(df):
     df = remove_rows_with_missing_ratings(df)
     df = combine_description_strings(df)
     df = set_default_feature_values(df)
+
     return df
    
 def load_airbnb(df, label: str) -> tuple:
     """This function prepares the data to be used in a ML model returning a features and values tuple
     Output:Tuple of features and labels of fields with non-text data"""
-    df.drop(df.columns[0], axis =1)
-    labels = df[label]
+
+    labels = df[label].values
     features = df.drop(columns = [label], axis = 1)
-    features = features.select_dtypes(include=['int64', 'float64']).values 
+    features = features.select_dtypes(include=['int64', 'float64']).values
 
     return features, labels
 
@@ -59,6 +60,10 @@ if __name__ == "__main__":
     df.to_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
     label = 'Price_Night'
     features, labels = load_airbnb(df, label)
+    # for value in features:
+    #     print(value)
+
+
 
     
 

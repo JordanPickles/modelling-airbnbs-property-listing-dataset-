@@ -1,0 +1,1 @@
+{"optimiser": "SGD", "learning_rate": 0.001, "hidden_layer_width": 12, "dropout": 0.2}
