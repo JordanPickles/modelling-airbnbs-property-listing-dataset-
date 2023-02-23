@@ -166,6 +166,7 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
             validation_r2 += r2_score(y_validation_detached, validation_prediction_detached)
 
 
+
     #Normalises performance metrics to the number of samples passed through the model
     train_rmse_loss = train_rmse_loss/(epochs*len(train_loader))
     validation_rmse_loss = validation_rmse_loss/(epochs*len(validation_loader))
@@ -299,9 +300,9 @@ def find_best_nn(hyperparameters, train_dataset, validation_dataset, test_datase
 
     nn_configs_dict = generate_nn_configs()
     
-    train_loader = DataLoader(train_dataset, batch_size = 32, shuffle=True)
-    validation_loader = DataLoader(validation_dataset, batch_size = 32, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size = 32, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size = 16, shuffle=True)
+    validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
+    test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
 
     best_rmse_loss = np.inf
     best_model_name = None
