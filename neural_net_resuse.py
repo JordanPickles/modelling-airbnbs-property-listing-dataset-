@@ -23,7 +23,7 @@ from datetime import datetime
 from math import sqrt
 
 
-class AirbnbNightlyPriceDataset(Dataset):
+class AirbnbBedroomDataset(Dataset):
     def __init__(self, data, prediction_variable):
         super().__init__() 
         self.data = data.drop(data.columns[data.columns.str.contains('unnamed', case = False)], axis = 1)
@@ -35,6 +35,10 @@ class AirbnbNightlyPriceDataset(Dataset):
 
     def __len__(self):
         return len(self.X)
+
+
+
+
 
 
 class NN(torch.nn.Module):
@@ -57,7 +61,7 @@ class NN(torch.nn.Module):
 
         
     def forward(self, X):
-        return self.layers(X)
+        return F.sigmoid(self.layers(X))
 
 def split_data(dataset): #TODO scalar the data
     """Splits the input dataset into training, validation, and testing sets.
@@ -110,10 +114,9 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
         optimiser = torch.optim.Adam
         optimiser = optimiser(model.parameters(), nn_config['learning_rate'] )
     batch_index = 0
-    train_rmse_loss = 0.0
-    validation_rmse_loss = 0.0
-    train_r2 = 0.0
-    validation_r2 = 0.0
+    train_cross_entropy_loss = 0.0
+    validation_cross_entropy_loss = 0.0
+
 
     for epoch in range(epochs): # Loops through the dataset a number of times
 
@@ -127,22 +130,17 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
 
                         
             train_prediction = model(X_train) 
-            mse_loss = F.mse_loss(train_prediction, y_train) 
-            mse_loss = mse_loss.type(torch.float32)
-            mse_loss.backward() # Populates the gradients from the parameters of the smodel
+            cross_entropy_loss = F.binary_cross_entropy(train_prediction, y_train) 
+            cross_entropy_loss = cross_entropy_loss.type(torch.float32)
+            cross_entropy_loss.backward() # Populates the gradients from the parameters of the smodel
             
             optimiser.step() #Optimisation step
             optimiser.zero_grad() # Resets the grad to zero as the grads are no longer useful as they were calculated when the model had different parameters
 
-            writer.add_scalar('training_loss', mse_loss.item(), batch_index)
+            writer.add_scalar('training_loss', cross_entropy_loss.item(), batch_index)
             batch_index += 1
-            rmse_loss = torch.sqrt(mse_loss)
-            train_rmse_loss += rmse_loss.item()            
 
-            train_prediction_detached = train_prediction.detach().numpy()
-            y_train_detached = y_train.detach().numpy()
-            train_r2 += r2_score(y_train_detached, train_prediction_detached)
-
+            # TODO Add other metrics? F1, recall, precision and accuracy?
 
 
         for batch in validation_loader: # Samples different batches of the data from the data loader
@@ -154,33 +152,33 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
             y_validation = y_validation.view(-1, 1)
                         
             validation_prediction = model(X_validation) 
-            mse_loss = F.mse_loss(validation_prediction, y_validation) 
-            mse_loss = mse_loss.type(torch.float32)
-            writer.add_scalar('validation_loss', mse_loss.item(), batch_index) 
-            rmse_loss = torch.sqrt(mse_loss)
-            validation_rmse_loss += rmse_loss.item()
+            cross_entropy_loss = F.binary_cross_entropy(validation_prediction, y_validation) 
+            cross_entropy_loss = cross_entropy_loss.type(torch.float32)
+            cross_entropy_loss.backward() # Populates the gradients from the parameters of the smodel
+            
+            optimiser.step() #Optimisation step
+            optimiser.zero_grad() # Resets the grad to zero as the grads are no longer useful as they were calculated when the model had different parameters
 
-            #Calculate r2
-            validation_prediction_detached = validation_prediction.detach().numpy()
-            y_validation_detached = y_validation.detach().numpy()
-            validation_r2 += r2_score(y_validation_detached, validation_prediction_detached)
+            writer.add_scalar('training_loss', cross_entropy_loss.item(), batch_index)
+            batch_index += 1
+
+
+            # TODO Add other metrics? F1, recall, precision and accuracy?
 
 
 
     #Normalises performance metrics to the number of samples passed through the model
-    train_rmse_loss = train_rmse_loss/(epochs*len(train_loader))
-    validation_rmse_loss = validation_rmse_loss/(epochs*len(validation_loader))
-    train_r2 = train_r2 / (epochs*len(train_loader))
-    validation_r2 = validation_r2 / (epochs*len(validation_loader))
+    train_cross_entropy_loss = train_cross_entropy_loss/(epochs*len(train_loader))
+    validation_cross_entropy_loss = validation_cross_entropy_loss/(epochs*len(validation_loader))
 
     model_name = datetime.fromtimestamp(datetime.timestamp(datetime.now())).strftime("%d-%m-%Y, %H:%M:%S")
 
-    if not os.path.exists('./models/regression/neural_networks/trained_models'):
-        os.makedirs('./models/regression/neural_networks/trained_models')
-    model_path = f'./models/regression/neural_networks/trained_models/{model_name}'
+    if not os.path.exists('./models/classification/neural_networks/trained_models'):
+        os.makedirs('./models/classification/neural_networks/trained_models')
+    model_path = f'./models/classification/neural_networks/trained_models/{model_name}'
     torch.save(model.state_dict(), model_path)
 
-    return train_rmse_loss, validation_rmse_loss, train_r2, validation_r2, model_name
+    return train_cross_entropy_loss, validation_cross_entropy_loss, model_name
 
 
 def test_model(nn_config, state_dict_path, dataloader):
@@ -203,8 +201,8 @@ def test_model(nn_config, state_dict_path, dataloader):
     scaler = MinMaxScaler()
 
     batch_index = 0
-    test_rmse_loss = 0.0
-    test_r2 = 0.0
+    test_cross_entropy_loss = 0.0
+
     
     state_dict = torch.load(state_dict_path)
     model.load_state_dict(state_dict)
@@ -222,26 +220,16 @@ def test_model(nn_config, state_dict_path, dataloader):
         test_prediction = model(X_test) 
         inference_latency = (time.time() - prediction_start_time) / len(test_prediction)    
      
-        #Calculate MSE Loss
-        mse_loss = F.mse_loss(test_prediction, y_test)
-        mse_loss = mse_loss.type(torch.float32) 
-        writer.add_scalar('test_loss', mse_loss.item(), batch_index)
-
-        #Calculate RMSE loss
-        rmse_loss = torch.sqrt(mse_loss)
-        test_rmse_loss += rmse_loss.item()
-
-        #Calculate r2
-        prediction_detached = test_prediction.detach().numpy()
-        y_test_detached = y_test.detach().numpy()
-        test_r2 += r2_score(y_test_detached, prediction_detached)
+        #Calculate Loss
+        cross_entropy_loss = F.binary_cross_entropy(test_prediction, y_test) 
+        cross_entropy_loss = cross_entropy_loss.type(torch.float32)
+        cross_entropy_loss.backward() # Populates the gradients from the parameters of the smodel
 
         batch_index += 1
     
-    test_rmse_loss = test_rmse_loss/(len(dataloader))
-    test_r2 = test_r2 / len(dataloader)
+    test_cross_entropy_loss = test_cross_entropy_loss/(len(dataloader))
 
-    return test_rmse_loss, inference_latency, test_r2
+    return test_cross_entropy_loss, inference_latency
            
 
 def get_nn_config(config_file = 'nn_config.yaml') -> dict:
@@ -304,7 +292,7 @@ def find_best_nn(hyperparameters, train_dataset, validation_dataset, test_datase
     validation_loader = DataLoader(validation_dataset, batch_size = 16, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size = 16, shuffle=True)
 
-    best_rmse_loss = np.inf
+    best_cross_entropy_loss = np.inf
     best_model_name = None
     best_model_path = None
     best_hyperparameters = None
@@ -314,24 +302,24 @@ def find_best_nn(hyperparameters, train_dataset, validation_dataset, test_datase
     for nn_config in nn_configs_dict:
         
         train_start_time = time.time()
-        train_rmse_loss, validation_rmse_loss, train_r2, validation_r2, model_name = train_model(train_loader, validation_loader, nn_config) 
+        train_cross_entropy_loss, validation_cross_entropy_loss, model_name = train_model(train_loader, validation_loader, nn_config) 
         model_training_duration = time.time() - train_start_time
       
         # Logic applied to decide if model trained is better than the previous best model, if so the best parameters are updated
-        if validation_rmse_loss < best_rmse_loss:
-            best_rmse_loss = validation_rmse_loss
+        if validation_cross_entropy_loss < best_cross_entropy_loss:
+            best_cross_entropy_loss = validation_cross_entropy_loss
             best_model_name = model_name
             best_model_path = f'./models/regression/neural_networks/trained_models/{best_model_name}'
             best_hyperparameters = nn_config
             best_model_metrics = performance_metrics
-            test_rmse_loss, inference_latency, test_r2 = test_model(best_hyperparameters, best_model_path, test_loader) 
+            test_cross_entropy_loss, inference_latency = test_model(best_hyperparameters, best_model_path, test_loader) 
             #Adds perfromance metrics to dict
-            performance_metrics['train_RMSE_loss'] = train_rmse_loss
-            performance_metrics['train_R_squared'] = train_r2
-            performance_metrics['validation_RMSE_loss'] = validation_rmse_loss
-            performance_metrics['validation_R_squared'] = validation_r2 
-            performance_metrics['test_RMSE_loss'] = test_rmse_loss
-            performance_metrics['test_R_squared'] = test_r2
+            performance_metrics['train_cross_entropy_loss'] = train_cross_entropy_loss
+            
+            performance_metrics['validation_cross_entropy_loss'] = validation_cross_entropy_loss
+            
+            performance_metrics['test_cross_entropy_loss'] = test_cross_entropy_loss
+            
             performance_metrics['training_duration'] = model_training_duration
             performance_metrics['inference_latency'] = inference_latency
     
@@ -352,26 +340,26 @@ Parameters:
 Returns:
     None """
     # Creates a folder for the best model trained and then moves model state dict into a folder specifically for that model   
-    new_model_folder = os.makedirs(f'./models/regression/neural_networks/{prediction_variable}/{model_name}')
-    new_model_path = f'./models/regression/neural_networks/{prediction_variable}/{model_name}/model.pt'
+    new_model_folder = os.makedirs(f'./models/classification/neural_networks/{prediction_variable}/{model_name}')
+    new_model_path = f'./models/classification/neural_networks/{prediction_variable}/{model_name}/model.pt'
     shutil.move(model_path, new_model_path)
 
 
     #Saves hyperparameters and model performance metrics
-    with open(f'./models/regression/neural_networks/{prediction_variable}/{model_name}/hyperparameters.json', 'w') as f:
+    with open(f'./models/classification/neural_networks/{prediction_variable}/{model_name}/hyperparameters.json', 'w') as f:
         json.dump(hyperparameters, f)
-    with open(f'./models/regression/neural_networks/{prediction_variable}/{model_name}/metrics.json', 'w') as f:
+    with open(f'./models/classification/neural_networks/{prediction_variable}/{model_name}/metrics.json', 'w') as f:
         json.dump(metrics, f)
 
 
 
 if __name__ == "__main__":
-    prediction_variable = 'Price_Night'
+    prediction_variable = 'bedrooms'
 
     df = pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
 
 
-    dataset = AirbnbNightlyPriceDataset(df, prediction_variable) #Creates an instance of the class
+    dataset = AirbnbBedroomDataset(df, prediction_variable) #Creates an instance of the class
     train_dataset, validation_dataset, test_dataset = split_data(dataset)
 
     best_model_name, best_model_path, best_hyperparameters, performance_metrics  = find_best_nn(generate_nn_configs(),train_dataset, validation_dataset, test_dataset)
