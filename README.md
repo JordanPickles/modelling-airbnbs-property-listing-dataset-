@@ -4,10 +4,13 @@ This porject is the 4th project of the AiCore data career accelerator programme 
 The objective of this project was to build a framework to systematically train, tune, and evaluate models on several tasks that are tackled by the Airbnb team.
 
 ## Milestone 1
-During this milestone, two python files were produced, tabular_data.py and prepare_image_data.py to clean and prepare both the tabular data and image data in this project. The pandas package was used in both files. The os context manager package and the PIL package from pillow was used to prepare the image data.
+- Two python files were produced, tabular_data.py and prepare_image_data.py to clean and prepare both the tabular data and image data in this project using pandas
+- The os context manager package and the PIL package from pillow was used to prepare the image data.
+
 
 ### Cleaning the tabular data
-In this module, the data was taken in from a .csv file, cleaned and prepared for modelling in later milestones. Data with missing values were dropped form the df, text data was formatted and cleaned and the data. The data was returned as tuples (features and labels) to be used by a machine learning model.
+- Data with missing values were dropped form the df, text data was formatted and cleaned and the data.
+- The data was returned as tuples (features and labels) to be used by a machine learning model.
 
 ```
 def remove_rows_with_missing_ratings(df):
@@ -55,15 +58,9 @@ def load_airbnb(df, label: str) -> tuple:
 
     return features, labels
 
-if __name__ == "__main__":
-    df = pd.read_csv('./airbnb-property-listings/tabular_data/listing.csv')
-    df = clean_tabular_data(df)
-    df.to_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
-    label = 'Price_Night'
-    features, labels = load_airbnb(df, label)
 ```
 ### Preparing the image data
-This module takes in the images from the repository and formats all of the images by findings the smallest width of the images and resizes all images to the same height whilst maintaining the images aspect ratio. 
+- Images taken in from the repository and formats all of the images by findings the smallest width of the images and resizes all images to the same height whilst maintaining the images aspect ratio. 
 ```
 def resize_images(base_dir, processed_images_dir):
     """This function opens the image, checks all images are in RGB format and resizes all images in to the same height whilst maintaing the aspect ratio of the image, before saving the image in a processed_images folder.
@@ -95,17 +92,12 @@ def resize_images(base_dir, processed_images_dir):
             resized_img = img.resize((new_width, smallest_height))
             resized_img.save(os.path.join(processed_images_dir, os.path.basename(file)))
 
-if __name__ == '__main__':
-    if not os.path.exists('./airbnb-property-listings/processed_images'):
-        os.mkdir('./airbnb-property-listings/processed_images')
-
-    base_dir = './airbnb-property-listings/images/'
-    processed_images_dir = './airbnb-property-listings/processed_images/'
-    resize_images(base_dir, processed_images_dir)
 ```
 
 ## Milestone 2
-During this milestone, a regression model was created using several regression algorithms to predict the price per night from several features. Initially the data was loaded by calling the load_airbnb() method from the tabular_data.py module previously created. The data was then split using train_test_split at a 70%, 15% and 15% ratio.
+- A regression model was created 
+- Several regression algorithms were tests to predict price per night from severall features
+- Data was split into train, validation and test sets at a ratio of 70%, 15% and 15% respectively
 
 ```
 def split_data(X, y):
@@ -139,7 +131,7 @@ The regression models were then created, the following models were deployed:
 
 - Gradient Boosting Regressor - Creates an ensemble of decision trees which are influenced by the previous tree, each tree works iteratively to reduce the error of the previous tree.
 
-Each model underwent hyperparameter tuning using gridsearch to find the opitmal hyperparameters of each model. For each model, evaluation metrics were assessed and saved in the repository to be assessed later.
+
 
 ```
 def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
@@ -192,25 +184,9 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
     
     return best_model, best_hyperparameters, performance_metrics
     
-    
-    def save_model(model, hyperparameters, metrics, model_folder):
-    """This function saves a trained model, its associated hyperparameters and performance metrics to a specified folder.
-    Inputs:
-        model: A trained machine learning model
-        hyperparameters: A dictionary of the best hyperparameters used to train the model
-        metrics: A dictionary of the performance metrics of the model on test and validation sets
-        model_folder: A string specifying the directory path where the model and associated files will be saved."""
-
-    
-    if not os.path.exists(model_folder):
-        os.makedirs(model_folder)
-
-    joblib.dump(model, f'{model_folder}/model.joblib')
-    with open(f'{model_folder}/hyperparameters.json', 'w') as f:
-        json.dump(hyperparameters, f)
-    with open(f'{model_folder}/metrics.json', 'w') as f:
-        json.dump(metrics, f)
-    
+```
+ - Each model underwent hyperparameter tuning using gridsearch to find the opitmal hyperparameters of each model. For each model, evaluation metrics were assessed and saved in the repository to be assessed later.
+```
     def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): 
     """This function evaluate different regression models by tuning the hyperparameters and then saving the best models, hyperparameters and performance metrics to specific folder.
 
@@ -280,51 +256,13 @@ def tune_regression_model_hyperparameters(model_class, X_train, y_train, X_test,
 
 ```
 
-The evaluation metrics were then assessed to find the model with the greatest accuracy.
+- The evaluation metrics were then assessed to find the model with the greatest accuracy.
 
-```
-def find_best_model():
-    """This function compares the Root Mean Squared Error (RMSE) of the trained models on validation set and returns the model with the lowest RMSE.
-    Inputs:
-        None
-    Outputs:
-        Prints the model name with the lowest RMSE
-    """
-    models = ['SGD Regressor', 'Decision Tree Regressor', 'Random Forest Regressor', 'Gradient Boosting Regressor']
-    best_model = None
-    best_rmse = float('inf')
-    best_r2 = 0
-    for model in models:
-        with open(f'./models/regression/linear_regression/{model}/metrics.json') as f: 
-            metrics = json.load(f)
-            validation_r2 = metrics['validation_r2']
-            validation_rmse = metrics['validation_rmse']
-            validation_mae = metrics['validation_mae']
-            print(f'{model}: RMSE: {validation_rmse}')
-
-            if validation_rmse < best_rmse:
-                best_rsme = validation_rmse
-                best_model = model
-
-    
-    return print('The model with the lowest RMSE is: {best_model}')
-```
-
-To call the methods an if__name__ == "__main__" section was created.
-
-```
-if __name__ == "__main__":
-    X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), 'Price_Night')
-    X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y) 
-    evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation)
-    find_best_model()
-```
 
 ## Milestone 3 
-
-This model added a classifier model to make predictions on the property category by training classification models. The models trained and evaluated included; Logistic Regression, Decision Tree, Gradient Boosting Classifier and Random Forest Classifier.
-
-To develop this module, several functions were adapted from the linear regression model, the primary changes are with the error measure of the model and the evaluation metrics used, f1_micro was the scoring measure for the grid search conducted.
+- A classification model was created to predict the property category
+- The models trained and evaluated included; Logistic Regression, Decision Tree, Gradient Boosting Classifier and Random Forest Classifier.
+- To develop this module, several functions were adapted from the linear regression model, the primary changes are with the error measure of the model and the evaluation metrics used, f1_micro was the scoring measure for the grid search conducted.
 
 ```
 def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters):
@@ -374,104 +312,152 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
 
     
     return best_model, best_hyperparameters, performance_metrics
+```
 
+## Milestone 4
+
+ - In this milestone, a neural network was created
+ - PyTorch was used to create the neural network architecture
+ - A custom dataset was created for the airbnb dataset used in this project
+ 
+```
+class AirbnbNightlyPriceImageDataset(Dataset):
+    def __init__(self, data, prediction_variable):
+        super().__init__() 
+        self.data = data.drop(data.columns[data.columns.str.contains('unnamed', case = False)], axis = 1)
+        self.X, self.y = load_airbnb(self.data, prediction_variable)
+        assert len(self.X) == len(self.y) # Data and labels have to be of equal length
+
+    def __getitem__(self, index):
+        return (torch.tensor(self.X[index]), torch.tensor(self.y[index]))
+
+    def __len__(self):
+        return len(self.X)
+```
+
+- The linear regression neural network was created taking in 11 numerical features from the dataset, with price per night the label
+- The activation function in the model was the ReLu function
+- Dropout was included in the model to prevent the model overfitting
+- Model hyperparameters were tuned and the model with the lowest validation error was determined to be the best model
+
+```
+class NN(torch.nn.Module):
+    def __init__(self, nn_config):
+        super().__init__()
+        self.hidden_layer_width = nn_config['hidden_layer_width']
+        self.dropout = nn_config['dropout']
+        
+        self.layers = torch.nn.Sequential(
+            torch.nn.Linear(11, self.hidden_layer_width), # uses the same width in all layers of the model
+            torch.nn.ReLU(),       
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Linear(self.hidden_layer_width, self.hidden_layer_width),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Linear(self.hidden_layer_width, 1)
+
+        )
 
 ```
 
-Hyperparameters were set for the Logistic Regression, Decision Tree, Random Forest and Gradient Boosting classifiers. The hyperparameter tuning was conudcted using GridSearch and then the optimised model was trained and used to predict values of the validation set by calling the tune_classification_model_hyperparameters() function.
+- One of the model hyperparameters tested was the hidden layer width, one of the model widths tested was 14 nodes (see below an example)
+
+![Example model architecture](./visualisations/nn_architecture.png)
+
+- Each model with its hyperparameters were trained through the training loop
+- Train and validation loss was calculted using mean squared error as the loss function
+- Decisions upon the model performance were made on the validation rmse
 
 ```
-def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation): 
-    """This function evaluate different regression models by tuning the hyperparameters and then saving the best models, hyperparameters and performance metrics to specific folder.
+def train_model(train_loader, validation_loader, nn_config, epochs=10):
+    """Trains a neural network model on the provided training data and evaluates its performance on the validation data.
 
     Parameters:
-        X_train (Matrix): Normalized features for training
-        y_train (Vector): Lables for training
-        X_test (Matrix): Normalized features for testing
-        y_test (Vector): Lables for testing
-        X_validation (Matrix): Normalized features for validation
-        y_validation (Vector): Labels for validation
-    
-    Outputs:
-        It saves the best models, hyperparameters and performance metrics of all evaluated models to specific folder."""
-    
-    # Adds Hyperparameters for hyperparameter for each model
-    logistic_regression_hyperparameters = {
-        'penalty': ['l1', 'l2', 'elasticnet'],
-        'max_iter': [100, 1000, 10000],
-        'solver': ['lbfgs', 'newton-cg', 'sag', 'saga']
-    }
-    decision_tree_classifier_hyperparameters = {
-        'criterion': ['gini', 'entropy', 'log_loss'],
-        'splitter': ['best', 'random'],
-        'max_depth': [10, 20, 50], #TODO what is a good number?
-        'min_samples_split': [2, 4, 6, 8],
-        'min_samples_leaf': [1, 2, 3, 4],
-    }
-    random_forest_classifier_hyperparameters = {
-        'n_estimators': [50, 100, 200],
-        'criterion': ['gini', 'entropy', 'log_loss'],
-        'max_depth': [10, 20, 50],
-        'min_samples_split': [2, 4, 6,8],
-        'min_samples_leaf': [1, 2, 3, 4]
-    }
-    gradient_boosting_classifier_hyperparameters = {
-        'criterion': ['friedman_mse', 'squared_error'],
-        'min_samples_split': [2, 4, 6, 8],
-        'min_samples_leaf': [1, 2, 3, 4],
-        'max_depth': [2, 3, 4, 5]
-    }
-    
-    # Adds models to a dict to be iterated through
-    classification_models_dict = {
-        'Logistic Regression': [LogisticRegression(),logistic_regression_hyperparameters], 
-        'Decision Tree Classifier': [DecisionTreeClassifier() ,decision_tree_classifier_hyperparameters], 
-        'Random Forest Classifier': [RandomForestClassifier(), random_forest_classifier_hyperparameters], 
-        'Gradient Boosting Classifier': [GradientBoostingClassifier() ,gradient_boosting_classifier_hyperparameters]
-    }
-    
-    # Create required directories to save the models to   
-    if not os.path.exists('./models'):
-        os.makedirs('./models')
-    if not os.path.exists('./models/classification'):
-        os.makedirs('./models/classification')
-  
+        - train_loader: a PyTorch DataLoader object that loads the training data in batches.
+        - validation_loader: a PyTorch DataLoader object that loads the validation data in batches.
+        - nn_config: a dictionary containing the configuration for the neural network, including the number of input and output features, the number of hidden layers and their sizes, the activation function to be used, and the type of optimizer and learning rate.
+        - epochs: an integer indicating the number of times to loop through the entire dataset during training (default: 10).
 
-    # For loop iterates through the models provided and calls the tune_regression_mode_hyperparameters
-    for key, values in classification_models_dict.items(): #TODO - should a random seed be included here?
-        model, hyperparameters = values
-        best_model, best_hyperparameters, performance_metrics = tune_classification_model_hyperparameters(model, X_train, y_train, X_test, y_test, X_validation, y_validation, hyperparameters)
-        folder_path = f'./models/classification/{key}'
-        save_model(best_model, best_hyperparameters, performance_metrics, folder_path) 
+    Returns:
+        - train_rmse_loss: a float representing the root mean squared error (RMSE) of the model's predictions on the training data.
+        - validation_rmse_loss: a float representing the RMSE of the model's predictions on the validation data.
+        - train_r2: a float representing the R-squared score of the model's predictions on the training data.
+        - validation_r2: a float representing the R-squared score of the model's predictions on the validation data.
+        - model_name: a string representing the name of the trained model file."""
+    
+    model = NN(nn_config)
+    writer = SummaryWriter()
+    scaler = MinMaxScaler()
+    if nn_config['optimiser'] == 'SGD':
+        optimiser = torch.optim.SGD
+        optimiser = optimiser(model.parameters(), nn_config['learning_rate'])
+    if nn_config['optimiser'] == 'Adam':
+        optimiser = torch.optim.Adam
+        optimiser = optimiser(model.parameters(), nn_config['learning_rate'] )
+    batch_index = 0
+    train_rmse_loss = 0.0
+    validation_rmse_loss = 0.0
+    train_r2 = 0.0
+    validation_r2 = 0.0
+
+    for epoch in range(epochs): # Loops through the dataset a number of times
+
+        for batch in train_loader: # Samples different batches of the data from the data loader
+            
+            X_train, y_train = batch # Sets features and labels from the batch
+
+            X_train = X_train.type(torch.float32)
+            y_train = y_train.type(torch.float32)
+            y_train = y_train.view(-1, 1)
+
+                        
+            train_prediction = model(X_train) 
+            mse_loss = F.mse_loss(train_prediction, y_train) 
+            mse_loss = mse_loss.type(torch.float32)
+            mse_loss.backward() # Populates the gradients from the parameters of the smodel
+            
+            optimiser.step() #Optimisation step
+            optimiser.zero_grad() # Resets the grad to zero as the grads are no longer useful as they were calculated when the model had different parameters
+
+            writer.add_scalar('training_loss', mse_loss.item(), batch_index)
+            batch_index += 1
+            rmse_loss = torch.sqrt(mse_loss)
+            train_rmse_loss += rmse_loss.item()            
+
+            train_prediction_detached = train_prediction.detach().numpy()
+            y_train_detached = y_train.detach().numpy()
+            train_r2 += r2_score(y_train_detached, train_prediction_detached)
+
+
+
+        for batch in validation_loader: # Samples different batches of the data from the data loader
+            
+            X_validation, y_validation = batch # Sets features and labels from the batch
+            X_validation = X_validation.type(torch.float32)
+            # X_validation_scaled = torch.tensor(scaler.fit_transform(X_validation))
+            y_validation = y_validation.type(torch.float32)
+            y_validation = y_validation.view(-1, 1)
+                        
+            validation_prediction = model(X_validation) 
+            mse_loss = F.mse_loss(validation_prediction, y_validation) 
+            mse_loss = mse_loss.type(torch.float32)
+            writer.add_scalar('validation_loss', mse_loss.item(), batch_index) 
+            rmse_loss = torch.sqrt(mse_loss)
+            validation_rmse_loss += rmse_loss.item()
+
+            #Calculate r2
+            validation_prediction_detached = validation_prediction.detach().numpy()
+            y_validation_detached = y_validation.detach().numpy()
+            validation_r2 += r2_score(y_validation_detached, validation_prediction_detached)
 ```
 
-To evaluate the performance of the models, F1 error score was used to evaluate the model performance.
+- The loss of each model was visualised within tensorboard
 
-```
-def find_best_model(): 
-    """This function compares the Root Mean Squared Error (RMSE) of the trained models on validation set and returns the model with the lowest RMSE.
-    Parameters:
-        None
-    Outputs:
-        Prints the model name with the lowest RMSE
-    """
-    
-    models = ['Logistic Regression', 'Decision Tree Classifier', 'Random Forest Classifier', 'Gradient Boosting Classifier']
-    best_model = None
-    best_f1_score= float('inf') # Change the metric to accuracy or f1
-    
-    for model in models:
-        with open(f'./models/classification/{model}/metrics.json') as f: 
-            metrics = json.load(f)
-            validation_acuracy = metrics['validation_accuracy']
-            validation_recall = metrics['validation_recall']
-            validation_precision = metrics['validation_precision']
-            validation_f1_score = metrics['validation_f1_score']
-            print(f'{model}: F1 score: {validation_f1_score}')
+![Train loss for all models trained](./visualisations/all_models_train_loss.png)
 
-            if validation_f1_score < best_f1_score:
-                best_f1_score = validation_f1_score
-                best_model = model
+- The loss for the best performing model can be seen below
 
-    return print(f'The model with the lowest F1 Score is: {best_model}')
-```
+![Train loss for the best model](./visualisations/best_model_train_loss.png)
+
+
+- The model was then tested on the test set to assess the models performance 
