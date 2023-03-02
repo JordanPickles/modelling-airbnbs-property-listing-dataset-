@@ -26,7 +26,6 @@ from math import sqrt
 class AirbnbNightlyPriceDataset(Dataset):
     def __init__(self, data, prediction_variable):
         super().__init__() 
-        self.data = data.drop(data.columns[data.columns.str.contains('unnamed', case = False)], axis = 1)
         self.X, self.y = load_airbnb(self.data, prediction_variable)
         assert len(self.X) == len(self.y) # Data and labels have to be of equal length
 
@@ -368,7 +367,7 @@ Returns:
 if __name__ == "__main__":
     prediction_variable = 'Price_Night'
 
-    df = pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv')
+    df = pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv', index_col = 0)
 
 
     dataset = AirbnbNightlyPriceDataset(df, prediction_variable) #Creates an instance of the class

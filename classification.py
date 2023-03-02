@@ -25,7 +25,8 @@ def split_data(X, y):
     Returns:
         Normalized X_train, y_train, X_test, y_test, X_validation, y_validation.    """
 
-    binariser = LabelBinarizer() 
+    binariser = LabelBinarizer() # TODO usel label encoder
+    
 
     #Encodes the labels
     y_binarised = binariser.fit_transform(y.values.reshape(-1,1))
