@@ -29,6 +29,7 @@ class AirbnbBedroomDataset(Dataset):
     def __init__(self, data, prediction_variable):
         super().__init__() 
         print(data['Category'].shape)
+        print(len(data['bedrooms'].unique()))
         # category_column = data['Category']
         numerical_columns = pd.DataFrame(data.select_dtypes(include=['int64', 'float64']))
         print(numerical_columns.shape)
@@ -54,7 +55,8 @@ class AirbnbBedroomDataset(Dataset):
 
         
 
-        self.X = numerical_columns.join(category_encoded) # TODO look at this
+        self.X = numerical_columns.join(category_encoded) 
+        self.X = self.X.drop(df.columns[df.columns.str.contains('unnamed', case = False)], axis = 1)# TODO look at this
 
         self.X = self.X.drop(columns = [prediction_variable], axis = 1)
 
@@ -87,7 +89,7 @@ class NN(torch.nn.Module):
         self.dropout = nn_config['dropout']
         
         self.layers = torch.nn.Sequential(
-            torch.nn.Linear(17, self.hidden_layer_width), # uses the same width in all layers of the model
+            torch.nn.Linear(16, self.hidden_layer_width), # uses the same width in all layers of the model
             torch.nn.ReLU(),       
             torch.nn.Dropout(self.dropout),
             torch.nn.Linear(self.hidden_layer_width, self.hidden_layer_width),
@@ -164,6 +166,8 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
         for batch in train_loader: # Samples different batches of the data from the data loader
             
             X_train, y_train = batch # Sets features and labels from the batch
+            print(X_train)
+            print(y_train)
 
             X_train = X_train.type(torch.float32)
             y_train = y_train.type(torch.float32)
@@ -184,10 +188,10 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
             train_prediction_detached = train_prediction.detach().numpy()
             y_train_detached = y_train.detach().numpy()
 
-            train_running_accuracy += accuracy_score(y_train_detached, train_prediction_detached)
-            train_running_precision += precision_score(y_train_detached, train_prediction_detached)
-            train_running_recall += recall_score(y_train_detached, train_prediction_detached)
-            train_running_f1_error += f1_score(y_train_detached, train_prediction_detached)
+            # train_running_accuracy += accuracy_score(y_train_detached, train_prediction_detached)
+            # train_running_precision += precision_score(y_train_detached, train_prediction_detached)
+            # train_running_recall += recall_score(y_train_detached, train_prediction_detached)
+            # train_running_f1_error += f1_score(y_train_detached, train_prediction_detached)
 
 
         
@@ -213,10 +217,10 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
             validation_prediction_detached = validation_prediction.detach().numpy()
             y_validation_detached = y_validation.detach().numpy()
 
-            validation_running_accuracy += accuracy_score(y_validation_detached, validation_prediction_detached)
-            validation_running_precision += precision_score(y_validation_detached, validation_prediction_detached)
-            validation_running_recall += recall_score(y_validation_detached, validation_prediction_detached)
-            validation_running_f1_error += f1_score(y_validation_detached, validation_prediction_detached)
+            # validation_running_accuracy += accuracy_score(y_validation_detached, validation_prediction_detached)
+            # validation_running_precision += precision_score(y_validation_detached, validation_prediction_detached)
+            # validation_running_recall += recall_score(y_validation_detached, validation_prediction_detached)
+            # validation_running_f1_error += f1_score(y_validation_detached, validation_prediction_detached)
 
 
 
