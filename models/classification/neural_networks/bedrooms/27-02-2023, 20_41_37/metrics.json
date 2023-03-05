@@ -1,1 +1,0 @@
-{"train_cross_entropy_loss": 0.0, "train_accuracy": 825.6410256410257, "validation_cross_entropy_loss": 0.0, "validation_accuracy": 761.1111111111111, "test_cross_entropy_loss": 0.0, "test_accuracy": 888.8888888888889, "training_duration": 1.9875171184539795, "inference_latency": 4.5140584309895836e-05}

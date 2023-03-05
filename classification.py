@@ -7,7 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 
-from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import LabelEncoder
 
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 
@@ -25,17 +25,14 @@ def split_data(X, y):
     Returns:
         Normalized X_train, y_train, X_test, y_test, X_validation, y_validation.    """
 
-    binariser = LabelBinarizer() # TODO usel label encoder
-    
+    le = LabelEncoder()
 
     #Encodes the labels
-    y_binarised = binariser.fit_transform(y.values.reshape(-1,1))
+    y_encoded = le.fit_transform(y)
 
-    # Converts array into a 1D array, notes the index of the highest number of array (positive classification) to transform the array to be 1D and passible into a model
-    y_binarised = np.argmax(y_binarised, axis=1)
 
     #Splits the data into train and test data at 70% and 30% respectively
-    X_train, X_test, y_train, y_test = train_test_split(X, y_binarised, test_size = 0.3)
+    X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size = 0.3)
 
     #Splits the test data into test and validation set at 15% each
     X_test, X_validation, y_test, y_validation = train_test_split(X_test, y_test, test_size = 0.5)

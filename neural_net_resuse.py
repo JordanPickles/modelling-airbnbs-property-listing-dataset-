@@ -28,48 +28,26 @@ from math import sqrt
 class AirbnbBedroomDataset(Dataset):
     def __init__(self, data, prediction_variable):
         super().__init__() 
-        print(data['Category'].shape)
-        print(len(data['bedrooms'].unique()))
-        # category_column = data['Category']
-        numerical_columns = pd.DataFrame(data.select_dtypes(include=['int64', 'float64']))
-        print(numerical_columns.shape)
-        # print(category_column.dtype)
-        # print(numerical_columns.dtypes)
-        # print(numerical_columns.columns)
-    
 
+        numerical_columns = pd.DataFrame(data.select_dtypes(include=['int64', 'float64']))
+
+        # Label encodes the category column in preparation for 
         le = LabelEncoder()
         data['Category'] = le.fit_transform(data['Category'])
 
-        # create a one-hot encoder object
-
-        
         # fit and transform the category column
         ohe = OneHotEncoder(handle_unknown='ignore')
         data_array = data['Category'].to_numpy().reshape(-1,1)
-        print(data_array.shape)
         category_encoded = pd.DataFrame(ohe.fit_transform(data['Category'].values.reshape(-1,1)).toarray())
-        print(category_encoded.shape)
-        print(category_encoded)
 
-
-        
 
         self.X = numerical_columns.join(category_encoded) 
-        self.X = self.X.drop(df.columns[df.columns.str.contains('unnamed', case = False)], axis = 1)# TODO look at this
-
+        self.X = self.X.drop(df.columns[df.columns.str.contains('unnamed', case = False)], axis = 1)
         self.X = self.X.drop(columns = [prediction_variable], axis = 1)
-
-  
         self.X = self.X.values
-        print(self.X)
 
-        print(self.X.shape)
+        # Encodes the labels
         self.y = le.fit_transform(data[f'{prediction_variable}'].values)
-        print(self.y)
-
-
-
 
         assert len(self.X) == len(self.y) # Data and labels have to be of equal length
 
@@ -175,6 +153,8 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
 
                         
             train_prediction = model(X_train) 
+            print(train_prediction)
+            print(train_prediction.shape)
             cross_entropy_loss = F.cross_entropy(train_prediction, y_train.long()) 
             cross_entropy_loss = cross_entropy_loss.type(torch.float32)
             cross_entropy_loss.backward() # Populates the gradients from the parameters of the smodel
@@ -185,13 +165,17 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
             writer.add_scalar('training_loss', cross_entropy_loss.item(), batch_index)
             batch_index += 1
 
-            train_prediction_detached = train_prediction.detach().numpy()
+            _, train_prediction = torch.max(train_prediction, 1)
+            print(train_prediction.shape)
+            print(train_prediction)
+
+            # train_prediction_detached = train_prediction.detach().numpy()
             y_train_detached = y_train.detach().numpy()
 
-            # train_running_accuracy += accuracy_score(y_train_detached, train_prediction_detached)
-            # train_running_precision += precision_score(y_train_detached, train_prediction_detached)
-            # train_running_recall += recall_score(y_train_detached, train_prediction_detached)
-            # train_running_f1_error += f1_score(y_train_detached, train_prediction_detached)
+            train_running_accuracy += accuracy_score(y_train_detached, train_prediction)
+            train_running_precision += precision_score(y_train_detached, train_prediction, average="micro")
+            train_running_recall += recall_score(y_train_detached, train_prediction, average="micro")
+            train_running_f1_error += f1_score(y_train_detached, train_prediction, average="micro")
 
 
         
@@ -214,13 +198,15 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
             writer.add_scalar('validation_loss', cross_entropy_loss.item(), batch_index)
             batch_index += 1
 
-            validation_prediction_detached = validation_prediction.detach().numpy()
+            _, validation_prediction = torch.max(validation_prediction, 1)
+
+            # validation_prediction_detached = validation_prediction.detach().numpy()
             y_validation_detached = y_validation.detach().numpy()
 
-            # validation_running_accuracy += accuracy_score(y_validation_detached, validation_prediction_detached)
-            # validation_running_precision += precision_score(y_validation_detached, validation_prediction_detached)
-            # validation_running_recall += recall_score(y_validation_detached, validation_prediction_detached)
-            # validation_running_f1_error += f1_score(y_validation_detached, validation_prediction_detached)
+            validation_running_accuracy += accuracy_score(y_validation_detached, validation_prediction)
+            validation_running_precision += precision_score(y_validation_detached, validation_prediction, average="micro")
+            validation_running_recall += recall_score(y_validation_detached, validation_prediction, average="micro")
+            validation_running_f1_error += f1_score(y_validation_detached, validation_prediction, average="micro")
 
 
 
@@ -233,8 +219,6 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
     validation_precision = validation_running_precision / (epochs*len(validation_loader))
     validation_recall = validation_running_recall / (epochs*len(validation_loader))
     validation_f1_error = validation_running_f1_error / (epochs*len(validation_loader))
-
-
 
     #Normalises performance metrics to the number of samples passed through the model
     train_cross_entropy_loss = train_cross_entropy_loss/(epochs*len(train_loader))
@@ -300,25 +284,22 @@ def test_model(nn_config, state_dict_path, dataloader):
 
         writer.add_scalar('test_loss', cross_entropy_loss.item(), batch_index)
         batch_index += 1
+        _, test_prediction = torch.max(test_prediction, 1)
         
-        test_prediction_detached = test_prediction.detach().numpy()
+        # test_prediction_detached = test_prediction.detach().numpy()
         y_test_detached = y_test.detach().numpy()
         
-        test_running_accuracy += accuracy_score(y_test_detached, test_prediction_detached)
-        test_running_precision += precision_score(y_test_detached, test_prediction_detached)
-        test_running_recall += recall_score(y_test_detached, test_prediction_detached)
-        test_running_f1_error += f1_score(y_test_detached, test_prediction_detached)
+        test_running_accuracy += accuracy_score(y_test_detached, test_prediction)
+        test_running_precision += precision_score(y_test_detached, test_prediction, average="micro")
+        test_running_recall += recall_score(y_test_detached, test_prediction, average="micro")
+        test_running_f1_error += f1_score(y_test_detached, test_prediction, average="micro")
 
-        
     test_cross_entropy_loss = test_cross_entropy_loss/(len(dataloader))
 
     test_accuracy = test_running_accuracy / len(dataloader)
     validation_precision = test_running_precision / len(dataloader)
     validation_recall = test_running_recall / len(dataloader)
     validation_f1_error = test_running_f1_error / len(dataloader)
-
-
-
 
     return test_cross_entropy_loss, test_accuracy, inference_latency
            
