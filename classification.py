@@ -7,7 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder
 
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 
@@ -25,10 +25,10 @@ def split_data(X, y):
     Returns:
         Normalized X_train, y_train, X_test, y_test, X_validation, y_validation.    """
 
-    le = LabelEncoder()
+    ohe = OneHotEncoder()
 
     #Encodes the labels
-    y_encoded = le.fit_transform(y)
+    y_encoded = ohe.fit_transform(y.reshape(-1,1))
 
 
     #Splits the data into train and test data at 70% and 30% respectively
@@ -42,6 +42,8 @@ def split_data(X, y):
     X_train = scaler.fit_transform(X_train)
     X_test = scaler.fit_transform(X_test)
     X_validation = scaler.fit_transform(X_validation)
+
+
 
     return X_train, y_train, X_test, y_test, X_validation, y_validation
 
@@ -162,7 +164,7 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
     
     # Adds Hyperparameters for hyperparameter for each model
     logistic_regression_hyperparameters = {
-        'penalty': ['l1', 'l2', 'elasticnet'],
+        'penalty': ['l2', 'none'],
         'max_iter': [100, 1000, 10000],
         'solver': ['lbfgs', 'newton-cg', 'sag', 'saga']
     }
@@ -241,5 +243,6 @@ def find_best_model():
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), "Category")
     X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y)
+    print(y_train.shape)
     evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation)
     find_best_model()

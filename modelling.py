@@ -70,14 +70,14 @@ def train_model(X_train, y_train, X_test, y_test, X_validation, y_validation):
     train_mse = mean_squared_error(y_train, y_train_pred)
     train_rmse = mean_squared_error(y_train, y_train_pred, squared = False)
     train_r2 = r2_score(y_train, y_train_pred)
-    
-    test_mse = mean_squared_error(y_test, y_test_pred)
-    test_rmse = sqrt(mean_squared_error(y_test, y_test_pred))
-    test_r2 = r2_score(y_test, y_test_pred)
 
     validation_mse = mean_squared_error(y_validation, y_validation_pred)
     validation_rmse = sqrt(mean_squared_error(y_validation, y_validation_pred))
     validation_r2 = r2_score(y_validation, y_validation_pred)
+
+    test_mse = mean_squared_error(y_test, y_test_pred)
+    test_rmse = sqrt(mean_squared_error(y_test, y_test_pred))
+    test_r2 = r2_score(y_test, y_test_pred)
 
     print(f"Train MSE: {train_mse} | Train RMSE: {train_rmse} | Train R2: {train_r2}")
     print(f"Test MSE: {test_mse} | Test RMSE: {test_rmse} | Test R2 {test_r2}")
