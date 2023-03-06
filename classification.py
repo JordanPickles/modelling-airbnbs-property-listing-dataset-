@@ -16,7 +16,7 @@ import joblib
 import json
 
 def split_data(X, y):
-    """Split data into train, test, and validation sets, with normalization.
+    """Split data into train, test, and validation sets, with normalization. The labels are also encoded.
 
     Parameters:
         X (Matrix): Features
@@ -25,11 +25,12 @@ def split_data(X, y):
     Returns:
         Normalized X_train, y_train, X_test, y_test, X_validation, y_validation.    """
 
-    ohe = OneHotEncoder()
+    print(y)
+    le = LabelEncoder()
+    y_encoded = le.fit_transform(y)
+    print(y)
 
-    #Encodes the labels
-    y_encoded = ohe.fit_transform(y.reshape(-1,1))
-
+    print(y_encoded)
 
     #Splits the data into train and test data at 70% and 30% respectively
     X_train, X_test, y_train, y_test = train_test_split(X, y_encoded, test_size = 0.3)
@@ -116,16 +117,17 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
 
     # Provides Validation Metrics
     y_validation_pred = best_model.predict(X_validation)
+    # Accuracy score the same as F1 error in this multiclass classification - precision and recall calculated using weighted average as micro would return the same score as the accuracy
     y_validation_accuracy = accuracy_score(y_validation, y_validation_pred)
-    y_validation_precision = precision_score(y_validation, y_validation_pred, average='micro')
-    y_validation_recall = recall_score(y_validation, y_validation_pred, average='micro')
-    y_validation_f1 = f1_score(y_validation, y_validation_pred, average='micro')
+    y_validation_precision = precision_score(y_validation, y_validation_pred, average='weighted')
+    y_validation_recall = recall_score(y_validation, y_validation_pred, average='weighted')
+ 
 
     # Maps metrics to the performance metrics dict
     performance_metrics['validation_accuracy'] = y_validation_accuracy
     performance_metrics['validation_precision'] = y_validation_precision
     performance_metrics['validation_recall'] = y_validation_recall
-    performance_metrics['validation_f1_score'] = y_validation_f1
+
 
     
     return best_model, best_hyperparameters, performance_metrics
@@ -171,7 +173,7 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
     decision_tree_classifier_hyperparameters = {
         'criterion': ['gini', 'entropy', 'log_loss'],
         'splitter': ['best', 'random'],
-        'max_depth': [10, 20, 50], #TODO what is a good number?
+        'max_depth': [10, 20, 50],
         'min_samples_split': [2, 4, 6, 8],
         'min_samples_leaf': [1, 2, 3, 4]
     }
@@ -191,7 +193,7 @@ def evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_valida
     
     # Adds models to a dict to be iterated through
     classification_models_dict = {
-        'Logistic Regression': [LogisticRegression(),logistic_regression_hyperparameters], 
+        'Logistic Regression': [LogisticRegression(multi_class='multinomial'),logistic_regression_hyperparameters], 
         'Decision Tree Classifier': [DecisionTreeClassifier() ,decision_tree_classifier_hyperparameters], 
         'Random Forest Classifier': [RandomForestClassifier(), random_forest_classifier_hyperparameters], 
         'Gradient Boosting Classifier': [GradientBoostingClassifier() ,gradient_boosting_classifier_hyperparameters]
@@ -222,19 +224,18 @@ def find_best_model():
     
     models = ['Logistic Regression', 'Decision Tree Classifier', 'Random Forest Classifier', 'Gradient Boosting Classifier']
     best_model = None
-    best_f1_score= float('inf') 
+    best_accuracy_score= 0.0
     
     for model in models:
         with open(f'./models/classification/{model}/metrics.json') as f: 
             metrics = json.load(f)
-            validation_acuracy = metrics['validation_accuracy']
+            validation_accuracy = metrics['validation_accuracy']
             validation_recall = metrics['validation_recall']
             validation_precision = metrics['validation_precision']
-            validation_f1_score = metrics['validation_f1_score']
-            print(f'{model}: F1 score: {validation_f1_score}')
+            print(f'{model}: F1 score: {validation_accuracy}')
 
-            if validation_f1_score < best_f1_score:
-                best_f1_score = validation_f1_score
+            if validation_accuracy > best_accuracy_score:
+                best_accuracy_score = validation_accuracy
                 best_model = model
 
     return print(f'The model with the lowest F1 Score is: {best_model}')
@@ -243,6 +244,5 @@ def find_best_model():
 if __name__ == "__main__":
     X, y = load_airbnb(pd.read_csv('./airbnb-property-listings/tabular_data/clean_tabular_data.csv'), "Category")
     X_train, y_train, X_test, y_test, X_validation, y_validation = split_data(X, y)
-    print(y_train.shape)
     evaluate_all_models(X_train, y_train, X_test, y_test, X_validation, y_validation)
     find_best_model()
