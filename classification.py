@@ -100,11 +100,9 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
     Returns:
     best_model (scikit-learn classifier instance): The best classifier instance after tuning hyperparameters.
     best_hyperparameters (dict): The best hyperparameters obtained from GridSearchCV.
-    performance_metrics (dict): A dictionary of performance metrics of the best model on the validation set. The metrics include:
-        - validation_accuracy (float): Accuracy score of the model on the validation set.
-        - validation_precision (float): Precision score of the model on the validation set.
-        - validation_recall (float): Recall score of the model on the validation set.
-        - validation_f1_score (float): F1 score of the model on the validation set.
+    performance_metrics (dict): A dictionary of performance metrics of the best model on the train, test and validation set. The metrics include:
+
+
     """
     
     performance_metrics = {}
