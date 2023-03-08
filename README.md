@@ -460,11 +460,11 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
 ![Train loss for the best model](./visualisations/best_model_train_loss.png)
 
 
-- The model was then tested on the test set to assess the models performance 
+- The RMSE for the test set was £131, although the performance for the model might not have been optimal, the generalisation gap between the training RMSE and validation RMSE was £9 (£131 vs £122). Further model tuning should be done to improve the performance of the neural network.
 
 ## Milestone 5
 
-This milestone reused the neural network code structure to build a multiclass classification neural network to predict the number of bedrooms each property would have. The category data is included in this model as a feature, to include the classification data, the category data is One Hot Encoded to convert the string data into numerical data. The inclusion of the category as an extra featured data added a total of 5 more features once the data had been through OneHotEncoding process.
+- This milestone reused the neural network code structure to build a multiclass classification neural network to predict the number of bedrooms each property would have. The category data is included in this model as a feature, to include the classification data, the category data is One Hot Encoded to convert the string data into numerical data. The inclusion of the category as an extra featured data added a total of 5 more features once the data had been through OneHotEncoding process.
 
 ```
 class AirbnbBedroomDataset(Dataset):
@@ -498,7 +498,7 @@ class AirbnbBedroomDataset(Dataset):
         return len(self.X)
 ```
 
-The changes to the neural network structure include the model predicting 9 outputs (the distinct number of bedroom classes) in which a softmax function was applied to the predictions of the neural network to provide 9 seperate probabilities (all adding up to 1) for each prediction. The class with the highest probability is taken as the prediction. 
+- The changes to the neural network structure include the model predicting 9 outputs (the distinct number of bedroom classes) in which a softmax function was applied to the predictions of the neural network to provide 9 seperate probabilities (all adding up to 1) for each prediction. The class with the highest probability is taken as the prediction. 
 
 ```
 class NN(torch.nn.Module):
@@ -524,8 +524,8 @@ class NN(torch.nn.Module):
 ```
 
 
-The loss function was adapted to cross entropy loss for the multiclass classification model. The training loss for the model was again visualised in tensorboard.
+- The loss function was adapted to cross entropy loss for the multiclass classification model. The training loss for the model was again visualised in tensorboard.
 
 ![Train loss for the best classification neural network model](./visualisations/neural_net_classification_loss.png)
 
-
+- The model performance was measured via the accuracy, precisiona and recall metrics. The test accuracy was 62% with the precision and recall at 39% and 62% respectively. The low precision score highlights that the model predicts a high number of false positives. To improve the model performance, further model tuning is required.
