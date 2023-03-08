@@ -1,1 +1,1 @@
-{"validation_accuracy": 1.0, "validation_precision": 1.0, "validation_recall": 1.0}
+{"train_accuracy": 1.0, "train_precision": 1.0, "train_recall": 1.0, "validation_accuracy": 0.9776119402985075, "validation_precision": 0.9781663113006396, "validation_recall": 0.9776119402985075, "test_accuracy": 0.9924812030075187, "test_precision": 0.9927596769702033, "test_recall": 0.9924812030075187}

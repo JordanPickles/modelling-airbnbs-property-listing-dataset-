@@ -116,17 +116,36 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
     best_hyperparameters = grid_search.best_params_
 
     # Provides Validation Metrics
+    y_train_pred = best_model.predict(X_train)
     y_validation_pred = best_model.predict(X_validation)
+    y_test_pred = best_model.predict(X_test)
+    
+    
     # Accuracy score the same as F1 error in this multiclass classification - precision and recall calculated using weighted average as micro would return the same score as the accuracy
+    y_train_accuracy = accuracy_score(y_train, y_train_pred)
+    y_train_precision = precision_score(y_train, y_train_pred, average='weighted')
+    y_train_recall = recall_score(y_train, y_train_pred, average='weighted')
+
     y_validation_accuracy = accuracy_score(y_validation, y_validation_pred)
     y_validation_precision = precision_score(y_validation, y_validation_pred, average='weighted')
     y_validation_recall = recall_score(y_validation, y_validation_pred, average='weighted')
  
+    y_test_accuracy = accuracy_score(y_test, y_test_pred)
+    y_test_precision = precision_score(y_test, y_test_pred, average='weighted')
+    y_test_recall = recall_score(y_test, y_test_pred, average='weighted')
 
     # Maps metrics to the performance metrics dict
+    performance_metrics['train_accuracy'] = y_train_accuracy
+    performance_metrics['train_precision'] = y_train_precision
+    performance_metrics['train_recall'] = y_train_recall
+
     performance_metrics['validation_accuracy'] = y_validation_accuracy
     performance_metrics['validation_precision'] = y_validation_precision
     performance_metrics['validation_recall'] = y_validation_recall
+
+    performance_metrics['test_accuracy'] = y_test_accuracy
+    performance_metrics['test_precision'] = y_test_precision
+    performance_metrics['test_recall'] = y_test_recall
 
 
     
@@ -232,7 +251,7 @@ def find_best_model():
             validation_accuracy = metrics['validation_accuracy']
             validation_recall = metrics['validation_recall']
             validation_precision = metrics['validation_precision']
-            print(f'{model}: F1 score: {validation_accuracy}')
+            print(f'{model}: accuracy {validation_accuracy}')
 
             if validation_accuracy > best_accuracy_score:
                 best_accuracy_score = validation_accuracy
