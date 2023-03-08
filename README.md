@@ -1,5 +1,5 @@
 # modelling-airbnbs-property-listing-dataset-
-This porject is the 4th project of the AiCore data career accelerator programme and this project contributes to the data science aspect of the course.
+This project is fulfils the data science aspect of the AiCore data career accelerator programme.
 
 The objective of this project was to build a framework to systematically train, tune, and evaluate models on several tasks that are tackled by the Airbnb team.
 
@@ -461,3 +461,71 @@ def train_model(train_loader, validation_loader, nn_config, epochs=10):
 
 
 - The model was then tested on the test set to assess the models performance 
+
+## Milestone 5
+
+This milestone reused the neural network code structure to build a multiclass classification neural network to predict the number of bedrooms each property would have. The category data is included in this model as a feature, to include the classification data, the category data is One Hot Encoded to convert the string data into numerical data. The inclusion of the category as an extra featured data added a total of 5 more features once the data had been through OneHotEncoding process.
+
+```
+class AirbnbBedroomDataset(Dataset):
+    def __init__(self, data, prediction_variable):
+        super().__init__() 
+
+        numerical_columns = pd.DataFrame(data.select_dtypes(include=['int64', 'float64']))
+
+        # Label encodes the category column in preparation for 
+        le = LabelEncoder()
+        data['Category'] = le.fit_transform(data['Category'])
+
+        # fit and transform the category column
+        ohe = OneHotEncoder(handle_unknown='ignore')
+        category_encoded = pd.DataFrame(ohe.fit_transform(data['Category'].values.reshape(-1,1)).toarray())
+
+        self.X = numerical_columns.join(category_encoded) 
+        self.X = self.X.drop(df.columns[df.columns.str.contains('unnamed', case = False)], axis = 1)
+        self.X = self.X.drop(columns = [prediction_variable], axis = 1)
+        self.X = self.X.values
+
+        # Encodes the labels
+        self.y = le.fit_transform(data[f'{prediction_variable}'].values)
+
+        assert len(self.X) == len(self.y) # Data and labels have to be of equal length
+
+    def __getitem__(self, index):
+        return (torch.tensor(self.X[index]), torch.tensor(self.y[index]))
+
+    def __len__(self):
+        return len(self.X)
+```
+
+The changes to the neural network structure include the model predicting 9 outputs (the distinct number of bedroom classes) in which a softmax function was applied to the predictions of the neural network to provide 9 seperate probabilities (all adding up to 1) for each prediction. The class with the highest probability is taken as the prediction. 
+
+```
+class NN(torch.nn.Module):
+    def __init__(self, nn_config):
+        super().__init__()
+        #define layers
+        self.hidden_layer_width = nn_config['hidden_layer_width']
+        self.dropout = nn_config['dropout']
+        
+        self.layers = torch.nn.Sequential(
+            torch.nn.Linear(16, self.hidden_layer_width), # uses the same width in all layers of the model
+            torch.nn.ReLU(),       
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Linear(self.hidden_layer_width, self.hidden_layer_width),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(self.dropout),
+            torch.nn.Linear(self.hidden_layer_width, 9) #Number of unique bedrooms in the labels
+
+        )
+        
+    def forward(self, X):
+        return F.softmax(self.layers(X))
+```
+
+
+The loss function was adapted to cross entropy loss for the multiclass classification model. The training loss for the model was again visualised in tensorboard.
+
+![Train loss for the best classification neural network model](./visualisations/neural_net_classification_loss.png)
+
+
