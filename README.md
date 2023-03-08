@@ -289,7 +289,7 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
         - validation_f1_score (float): F1 score of the model on the validation set.
     """
     
-    performance_metrics = {}
+        performance_metrics = {}
     
     grid_search = GridSearchCV(model_class, hyperparameters, scoring = 'f1_micro', cv = 5) 
     grid_search.fit(X_train, y_train)
@@ -298,17 +298,37 @@ def tune_classification_model_hyperparameters(model_class, X_train, y_train, X_t
     best_hyperparameters = grid_search.best_params_
 
     # Provides Validation Metrics
+    y_train_pred = best_model.predict(X_train)
     y_validation_pred = best_model.predict(X_validation)
+    y_test_pred = best_model.predict(X_test)
+    
+    
+    # Accuracy score the same as F1 error in this multiclass classification - precision and recall calculated using weighted average as micro would return the same score as the accuracy
+    y_train_accuracy = accuracy_score(y_train, y_train_pred)
+    y_train_precision = precision_score(y_train, y_train_pred, average='weighted')
+    y_train_recall = recall_score(y_train, y_train_pred, average='weighted')
+
     y_validation_accuracy = accuracy_score(y_validation, y_validation_pred)
-    y_validation_precision = precision_score(y_validation, y_validation_pred, average='micro')
-    y_validation_recall = recall_score(y_validation, y_validation_pred, average='micro')
-    y_validation_f1 = f1_score(y_validation, y_validation_pred, average='micro')
+    y_validation_precision = precision_score(y_validation, y_validation_pred, average='weighted')
+    y_validation_recall = recall_score(y_validation, y_validation_pred, average='weighted')
+ 
+    y_test_accuracy = accuracy_score(y_test, y_test_pred)
+    y_test_precision = precision_score(y_test, y_test_pred, average='weighted')
+    y_test_recall = recall_score(y_test, y_test_pred, average='weighted')
 
     # Maps metrics to the performance metrics dict
+    performance_metrics['train_accuracy'] = y_train_accuracy
+    performance_metrics['train_precision'] = y_train_precision
+    performance_metrics['train_recall'] = y_train_recall
+
     performance_metrics['validation_accuracy'] = y_validation_accuracy
     performance_metrics['validation_precision'] = y_validation_precision
     performance_metrics['validation_recall'] = y_validation_recall
-    performance_metrics['validation_f1_score'] = y_validation_f1
+
+    performance_metrics['test_accuracy'] = y_test_accuracy
+    performance_metrics['test_precision'] = y_test_precision
+    performance_metrics['test_recall'] = y_test_recall
+
 
     
     return best_model, best_hyperparameters, performance_metrics
