@@ -1,5 +1,5 @@
 # modelling-airbnbs-property-listing-dataset-
-This project is fulfils the data science aspect of the AiCore data career accelerator programme.
+This project is completed as part of the AiCore data science career accelerator programme.
 
 The objective of this project was to build a framework to systematically train, tune, and evaluate models on several tasks that are tackled by the Airbnb team.
 
@@ -9,7 +9,7 @@ The objective of this project was to build a framework to systematically train, 
 
 
 ### Cleaning the tabular data
-- Data with missing values were dropped form the df, text data was formatted and cleaned and the data.
+- Data with missing values were dropped form the df, text data was formatted and cleaned.
 - The data was returned as tuples (features and labels) to be used by a machine learning model.
 
 ```
@@ -96,7 +96,7 @@ def resize_images(base_dir, processed_images_dir):
 
 ## Milestone 2
 - A regression model was created 
-- Several regression algorithms were tests to predict price per night from severall features
+- Several regression algorithms were tested to predict price per night from several features
 - Data was split into train, validation and test sets at a ratio of 70%, 15% and 15% respectively
 
 ```
